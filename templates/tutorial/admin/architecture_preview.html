@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>架构图预览 - {{ template.name }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .preview-container { border: 1px solid #ccc; padding: 20px; margin: 20px 0; }
+        .slot { border: 1px solid #000; padding: 10px; margin: 5px; position: absolute; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>架构图模板预览: {{ template.name }}</h1>
+    
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% else %}
+        <div class="preview-container" style="position: relative; width: {{ template.width }}px; height: {{ template.height }}px; background-color: {{ template.background_color }};">
+            {% for slot in slots_data %}
+                <div class="slot" 
+                     style="left: {{ slot.x }}px; top: {{ slot.y }}px; width: {{ slot.width }}px; height: {{ slot.height }}px; background-color: {{ slot.bg_color }}; border-color: {{ slot.border_color }};">
+                    <strong>{{ slot.name }}</strong>
+                    <br>
+                    <small>{{ slot.description }}</small>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <h3>模板信息:</h3>
+        <ul>
+            <li>名称: {{ template.name }}</li>
+            <li>描述: {{ template.description }}</li>
+            <li>布局类型: {{ template.get_layout_type_display }}</li>
+            <li>尺寸: {{ template.width }} x {{ template.height }}</li>
+            <li>插槽数量: {{ slots_data|length }}</li>
+        </ul>
+    {% endif %}
+    
+    <a href="{% url 'admin:tutorial_architecturetemplate_changelist' %}">返回管理界面</a>
+</body>
+</html>

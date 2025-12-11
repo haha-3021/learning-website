@@ -1,0 +1,2506 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}積木モジュール - Python学習システム{% endblock %}
+
+{% block extra_css %}
+<style>
+/* 既存のCSSスタイルは変更なし */
+:root {
+    --primary-50: #f0f9ff;
+    --primary-100: #e0f2fe;
+    --primary-500: #4C56B3;
+    --primary-600: #3f4b9e;
+    --secondary-50: #f8fafc;
+    --secondary-100: #f1f5f9;
+    --secondary-500: #64748b;
+    --success-50: #f0fdf4;
+    --success-500: #22c55e;
+    --warning-50: #fffbeb;
+    --warning-500: #f59e0b;
+    --error-50: #fef2f2;
+    --error-500: #ef4444;
+    
+    /* 積木タイプカラー定義 */
+    --block-django: #4C56B3;
+    --block-python: #059669;
+    --block-data: #dc2626;
+    --block-database: #7c3aed;
+    --block-admin: #ea580c;
+    --block-url: #0891b2;
+    --block-template: #db2777;
+    --block-calc: #65a30d;
+    --block-add: #0d9488;
+    --block-delete: #991b1b;
+    --block-form: #EC4899;
+    --block-view: #8B5CF6;
+    --block-database: #475569;
+    
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+}
+
+/* ==================== ページレイアウト ==================== */
+
+/* === 超大版レイアウト：左右2カラム・最大幅1800px === */
+.building-blocks-page {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 18px;
+    min-height: calc(100vh - 80px);
+    height: calc(100vh - 80px);
+    padding: 16px 24px 24px;
+    background: var(--secondary-50);
+    overflow: hidden;
+    width: 100%;
+    max-width: 1800px;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+/* ==================== 積木ライブラリエリア（左カラム） ==================== */
+
+/* 左カラム：積木ライブラリ（サイドバー） */
+.blocks-library-section {
+    background: #ffffff;
+    border-radius: var(--radius-xl);
+    box-shadow: 0 6px 12px -2px rgb(0 0 0 / 0.15);
+    flex: 0 0 300px;
+    max-width: 320px;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.library-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--secondary-100);
+    flex-shrink: 0;
+}
+
+.library-header h2 {
+    color: var(--primary-500);
+    margin: 0 0 6px 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.library-header p {
+    color: var(--secondary-500);
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.library-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.library-sidebar {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+.progress-indicator {
+    background: var(--primary-50);
+    padding: 10px;
+    border-radius: var(--radius-md);
+    margin: 10px;
+    border-left: 3px solid var(--primary-500);
+    flex-shrink: 0;
+}
+
+.progress-indicator h4 {
+    margin: 0 0 3px 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary-500);
+}
+
+.progress-indicator p {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--secondary-500);
+}
+
+.filter-tabs {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    gap: 4px;
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+.filter-tab {
+    padding: 6px 8px;
+    background: none;
+    border: none;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--secondary-500);
+    transition: all 0.2s ease;
+    text-align: left;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    white-space: nowrap;
+    overflow: visible;
+}
+
+.filter-tab.active {
+    color: var(--primary-500);
+    border-left-color: var(--primary-500);
+    background: var(--primary-50);
+}
+
+.blocks-container {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.blocks-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+/* ==================== 積木カード ==================== */
+.block-card {
+    background: white;
+    border: 1px solid var(--secondary-100);
+    border-radius: var(--radius-lg);
+    padding: 10px;
+    cursor: grab;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 6px;
+    height: 110px;
+    display: flex;
+    flex-direction: column;
+}
+
+.block-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--block-color, var(--secondary-500));
+}
+
+.block-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px -4px rgb(0 0 0 / 0.15);
+    border-color: var(--block-color, var(--primary-500));
+}
+
+.block-card.locked {
+    cursor: not-allowed;
+    opacity: 0.7;
+    display: none;
+}
+
+.block-card.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+}
+
+.block-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.block-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    background: var(--block-color, var(--secondary-500));
+    color: white;
+    flex-shrink: 0;
+}
+
+.block-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.block-name {
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 3px 0;
+    font-size: 0.8rem;
+    line-height: 1.2;
+}
+
+.block-type {
+    display: inline-block;
+    background: var(--block-color, var(--secondary-500));
+    color: white;
+    padding: 1px 5px;
+    border-radius: 8px;
+    font-size: 0.6rem;
+    font-weight: 500;
+}
+
+.block-description {
+    color: var(--secondary-500);
+    font-size: 0.65rem;
+    line-height: 1.1;
+    margin: 4px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+}
+
+.block-status {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 4px;
+    font-size: 0.6rem;
+}
+
+/* ==================== システムアーキテクチャエリア（右カラム） ==================== */
+
+/* 右カラム：システムアーキテクチャ図 */
+.architecture-section {
+    background: #ffffff;
+    border-radius: var(--radius-xl);
+    box-shadow: 0 6px 12px -2px rgb(0 0 0 / 0.15);
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.architecture-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--secondary-100);
+    flex-shrink: 0;
+}
+
+.architecture-header h1 {
+    margin: 0 0 6px 0;
+    color: #1f2937;
+    font-size: 1.3rem;
+    font-weight: 800;
+}
+
+.architecture-header p {
+    margin: 0 0 12px 0;
+    color: var(--secondary-500);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.action-bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 8px 14px;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-primary {
+    background: var(--primary-500);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-600);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(76, 86, 179, 0.3);
+}
+
+.btn-secondary {
+    background: var(--secondary-100);
+    color: var(--secondary-700);
+}
+
+.btn-secondary:hover {
+    background: var(--secondary-200);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(100, 116, 139, 0.2);
+}
+
+/* キャンバスエリア */
+.canvas-section {
+    padding: 20px;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.canvas-container {
+    flex: 1 1 auto;
+    border: 3px dashed var(--secondary-200);
+    border-radius: var(--radius-lg);
+    background: 
+        linear-gradient(90deg, var(--secondary-100) 1px, transparent 1px),
+        linear-gradient(var(--secondary-100) 1px, transparent 1px);
+    background-size: 30px 30px;
+    position: relative;
+    overflow: auto;
+    min-height: 800px;
+}
+
+#architectureContent {
+    width: 100%;
+    height: auto;
+    min-height: 800px;
+    position: relative;
+}
+
+/* ==================== 接続線スタイル ==================== */
+.connections-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.flow-connection {
+    stroke: #6B7280;
+    stroke-width: 3;
+    fill: none;
+    marker-end: url(#arrowhead);
+}
+
+.flow-connection-dashed {
+    stroke-dasharray: 5,5;
+    stroke: #9CA3AF;
+}
+
+/* ==================== コードパネル ==================== */
+.code-panel {
+    background: white;
+    border-radius: var(--radius-xl);
+    box-shadow: 0 8px 15px -3px rgb(0 0 0 / 0.15);
+    padding: 24px;
+    margin-top: 20px;
+    max-height: 400px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.code-panel h3 {
+    margin: 0 0 20px 0;
+    color: #1f2937;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.code-editor {
+    background: #1e1e1e;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.code-header {
+    background: #2d2d2d;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #ccc;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.code-content {
+    padding: 20px;
+    color: #d4d4d4;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    flex: 1;
+    overflow-y: auto;
+    max-height: 280px;
+}
+
+.code-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    flex-shrink: 0;
+}
+
+/* ==================== モーダル ==================== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: var(--radius-xl);
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 30px 40px -12px rgb(0 0 0 / 0.2);
+}
+
+.modal-header {
+    padding: 24px 28px;
+    border-bottom: 1px solid var(--secondary-100);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1.4rem;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: var(--secondary-500);
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.close-modal:hover {
+    background: var(--secondary-100);
+    border-radius: 50%;
+}
+
+.modal-body {
+    padding: 28px;
+    max-height: calc(80vh - 100px);
+    overflow-y: auto;
+}
+
+.block-detail-section {
+    margin-bottom: 28px;
+}
+
+.block-detail-section h4 {
+    margin: 0 0 12px 0;
+    color: #374151;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.block-badge {
+    display: inline-block;
+    background: var(--primary-100);
+    color: var(--primary-700);
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.expand-knowledge {
+    background: var(--secondary-50);
+    padding: 20px;
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.no-content {
+    color: var(--secondary-500);
+    font-style: italic;
+}
+
+.loading {
+    text-align: center;
+    padding: 60px;
+    color: var(--secondary-500);
+    font-size: 1.1rem;
+}
+
+/* ==================== ノード ==================== */
+.node {
+    position: absolute;
+    min-width: 180px;
+    min-height: 60px;
+    background: #ffffff;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    padding: 12px 14px;
+    box-shadow: 0 6px 16px -8px rgba(0,0,0,.15);
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
+    line-height: 1.3;
+}
+
+.node.small { 
+    min-width: 150px; 
+    min-height: 50px; 
+    font-weight: 600; 
+    font-size: 0.9rem;
+    padding: 10px 12px;
+}
+
+.node.tiny { 
+    min-width: 140px; 
+    min-height: 45px; 
+    font-size: .9rem; 
+    padding: 8px 10px;
+}
+
+.node:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -8px rgba(0,0,0,.2);
+    border-color: var(--primary-500);
+}
+
+/* ドラッグ関連 */
+.node.drop-zone {
+    border: 2px dashed var(--primary-500);
+    background-color: var(--primary-50);
+    transform: scale(1.05);
+}
+
+.node.drop-allowed {
+    border-color: var(--success-500);
+    background-color: var(--success-50);
+}
+
+.node.drop-not-allowed {
+    border-color: var(--error-500);
+    background-color: var(--error-50);
+}
+
+.assigned-block {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 4px;
+}
+
+.block-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.block-icon-small {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: white;
+}
+
+.block-name-small {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.remove-block {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.4rem;
+    color: var(--error-500);
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+}
+
+.remove-block:hover {
+    background: var(--error-50);
+}
+
+/* ==================== レイヤー ==================== */
+.diagram-layer {
+    position: absolute;
+    border-radius: 14px;
+    padding: 16px 16px 26px;
+    box-shadow: 0 6px 18px -6px rgba(0,0,0,.2);
+    border: 2px solid rgba(0,0,0,.06);
+    z-index: 5;
+}
+
+.layer-title {
+    font-weight: 800;
+    margin: 0 0 15px 0;
+    font-size: 1.1rem;
+    color: #111827;
+    opacity: .9;
+}
+
+.node-label-sub { 
+    font-size: .78rem; 
+    color: #6b7280; 
+    margin-left: 6px; 
+    font-weight: 500; 
+}
+
+/* レイヤーカラー */
+.layer-purple { background: rgba(124,58,237,.08); border-color: rgba(124,58,237,.35); }
+.layer-green  { background: rgba(16,185,129,.1);  border-color: rgba(16,185,129,.35); }
+.layer-cyan   { background: rgba(6,182,212,.1);   border-color: rgba(6,182,212,.35); }
+.layer-orange { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.4); }
+.layer-pink   { background: rgba(236,72,153,.1);  border-color: rgba(236,72,153,.35); }
+.layer-gray   { background: rgba(107,114,128,0.08); border-color: rgba(107,114,128,0.35); }
+
+/* 接続線（SVG） */
+.diagram-svg .arrow { stroke: #6B7280; stroke-width: 3; fill: none; }
+.diagram-svg .arrow.dashed { stroke-dasharray: 6 6; stroke: #9CA3AF; }
+.diagram-svg text { font-size: 13px; fill: #374151; }
+
+/* ユーザーとHTTPノード位置調整（保持） */
+#userNode {
+    left: calc(100% - 200px) !important;
+    top: 40px !important;
+    width: 180px !important;
+    height: 60px !important;
+}
+
+#httpReq {
+    left: calc(50% - 80px) !important;
+    top: 110px !important;
+    width: 180px !important;
+    height: 55px !important;
+}
+
+/* ==================== スクロールバー ==================== */
+.blocks-container::-webkit-scrollbar,
+.code-content::-webkit-scrollbar,
+.canvas-container::-webkit-scrollbar {
+    width: 10px;
+}
+
+.blocks-container::-webkit-scrollbar-track,
+.code-content::-webkit-scrollbar-track,
+.canvas-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 6px;
+}
+
+.blocks-container::-webkit-scrollbar-thumb,
+.code-content::-webkit-scrollbar-thumb,
+.canvas-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 6px;
+}
+
+.blocks-container::-webkit-scrollbar-thumb:hover,
+.code-content::-webkit-scrollbar-thumb:hover,
+.canvas-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* ==================== レスポンシブ ==================== */
+@media (max-width: 1024px) {
+    .building-blocks-page {
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px;
+        height: auto;
+        min-height: calc(100vh - 60px);
+    }
+
+    .blocks-library-section {
+        flex: 0 0 auto;
+        max-width: 100%;
+        height: auto;
+    }
+
+    .architecture-section {
+        flex: 1 1 auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .blocks-grid {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .block-card {
+        height: 100px;
+        padding: 8px;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ユーティリティ */
+.btn-sm {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+}
+
+.text-sm {
+    font-size: 0.9rem;
+}
+
+.text-xs {
+    font-size: 0.8rem;
+}
+
+.slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* === 让积木页面“跳出” base.html 的 .container，铺满整个窗口宽度 === */
+.blocks-fullwidth-wrapper {
+    /* 用 viewport 宽度，而不是受 .container 的 max-width 限制 */
+    width: 100vw;
+
+    /* 这一套是常见的 full-bleed 技巧，用于从中间的 container 撑到全屏 */
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+
+    /* 背景跟你原来的页面一样 */
+    background: var(--secondary-50);
+}
+
+/* 真正的布局宽度：最大 1800px，居中 */
+.building-blocks-page {
+    max-width: 1800px;    /* 想更大就改这里，比如 2000 */
+    width: 100%;
+    margin: 0 auto;
+
+    /* 高度你可以按需要调，这里示例：减去导航+标题区域的高度 */
+    min-height: calc(100vh - 160px);
+
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 18px;
+    padding: 16px 24px 24px;
+    box-sizing: border-box;
+}
+
+.block-detail-section pre,
+.block-detail-section code {
+    white-space: pre-wrap;   /* 改行と折り返し両方を有効にする */
+    word-break: break-word;  /* 単語の途中でも折り返す */
+}
+
+/* ==================== 完成メッセージ ==================== */
+.completion-message {
+    background: #ecfdf5;
+    border: 1px solid #22c55e;
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    text-align: center;
+    box-shadow: 0 10px 25px -10px rgba(34,197,94,0.4);
+}
+
+.completion-message h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.2rem;
+    color: #166534;
+    font-weight: 700;
+}
+
+.completion-message p {
+    margin: 4px 0;
+    font-size: 0.9rem;
+    color: #14532d;
+}
+
+.completion-message ul {
+    list-style: disc;
+    margin: 8px 0 0 1.5rem;
+    padding: 0;
+    text-align: left;
+    color: #14532d;
+    font-size: 0.9rem;
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="blocks-fullwidth-wrapper">
+    <div class="building-blocks-page">
+        <!-- 左側: 積木ライブラリ -->
+        <section class="blocks-library-section">
+            <div class="library-header">
+                <h2>🧩 積木ライブラリ</h2>
+                <p>チャプターを完了して新しい積木を獲得しましょう</p>
+            </div>
+
+            <div class="library-content">
+                <div class="library-sidebar">
+                    <div class="progress-indicator">
+                        <h4>進捗状況</h4>
+                        <p>獲得済み: <strong>{{ chapters_completed }}</strong>/<strong>{{ total_chapters }}</strong> チャプター</p>
+                    </div>
+
+                    <div class="filter-tabs">
+                        <button class="filter-tab active" data-filter="all">すべて</button>
+                        <button class="filter-tab" data-filter="unlocked">利用可能</button>
+                        <button class="filter-tab" data-filter="locked">ロック中</button>
+                    </div>
+                </div>
+
+                <div class="blocks-container">
+                    <div class="blocks-grid" id="blocksGrid">
+                        {% for block in unlocked_blocks %}
+                        <div class="block-card unlocked" 
+                             data-block-id="{{ block.id }}"
+                             data-block-name="{{ block.name }}"
+                             data-block-type="{{ block.block_type }}"
+                             draggable="true">
+                            <div class="block-header">
+                                <div class="block-icon" data-block-type="{{ block.block_type }}">
+                                    <!-- アイコンはJavaScriptで設定 -->
+                                </div>
+                                <div class="block-info">
+                                    <div class="block-name">{{ block.name }}</div>
+                                    <span class="block-type">{{ block.get_block_type_display }}</span>
+                                </div>
+                            </div>
+                            <p class="block-description">{{ block.description }}</p>
+                            <div class="block-status unlocked">
+                                <span>✅</span>
+                                <span>利用可能</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        {% for block in locked_blocks %}
+                        <div class="block-card locked" 
+                             data-block-id="{{ block.id }}"
+                             data-block-name="{{ block.name }}"
+                             data-block-type="{{ block.block_type }}">
+                            <div class="block-header">
+                                <div class="block-icon" data-block-type="{{ block.block_type }}">
+                                    <!-- アイコンはJavaScriptで設定 -->
+                                </div>
+                                <div class="block-info">
+                                    <div class="block-name">{{ block.name }}</div>
+                                    <span class="block-type">{{ block.get_block_type_display }}</span>
+                                </div>
+                            </div>
+                            <p class="block-description">{{ block.description }}</p>
+                            <div class="block-status locked">
+                                <span>🔒</span>
+                                <span>ロック中</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 右側: システムアーキテクチャ図 -->
+        <section class="architecture-section">
+            <header class="architecture-header">
+                <h1>システムアーキテクチャ図</h1>
+                <p>積木をドラッグ＆ドロップしてシステムを構築してください。各コンポーネントには特定のタイプの積木のみ配置できます。</p>
+                
+                <div class="action-bar">
+                    <button class="btn btn-secondary" onclick="resetArchitecture()">
+                        <span>🔄</span>
+                        リセット
+                    </button>
+                    <button class="btn btn-secondary" onclick="saveArchitecture()">
+                        <span>💾</span>
+                        保存
+                    </button>
+                </div>
+            </header>
+
+            <!-- キャンバスエリア -->
+            <section class="canvas-section">
+                <!-- ★ 全部埋まったときに出すメッセージ（初期状態は非表示） -->
+                <div id="completionMessage" class="completion-message" style="display: none;">
+                    <h3>🎉 アーキテクチャ積木が完成しました！</h3>
+                    <p>現在の積木配置から判断すると，あなたは「記物本」Django アプリの基本的な流れ</p>
+                    <p>（URL → View → Form → Model → Database → Template）を一通り理解できています。</p>
+                    <p>次のステップとして，例えば次のようなテーマに進むことができます：</p>
+                    <ul>
+                        <li>Django のユーザー認証・ログイン機能（会員制サイト・マイページ）</li>
+                        <li>フォームバリデーションやウィジェットのカスタマイズ（よりリッチな入力画面）</li>
+                        <li>汎用クラスベースビューの応用（DetailView / ListView の発展的な使い方）</li>
+                        <li>Django REST Framework を用いた API 化（フロントと分離した設計）</li>
+                        <li>JavaScript や Fetch API と組み合わせた非同期通信・インタラクティブな画面</li>
+                    </ul>
+                    <p style="margin-top:8px; font-size:0.8rem; color:#16a34a;">
+                        ※ このメッセージは，すべての枠に積木を配置できたときに表示されます。
+                    </p>
+                </div>
+
+                <div class="canvas-container" id="canvasContainer">
+                    <!-- 接続コンテナ -->
+                    <svg class="connections-container" id="connectionsContainer" width="100%" height="100%">
+                        <defs>
+                            <marker id="arrowhead" markerWidth="12" markerHeight="8" 
+                                    refX="10" refY="4" orient="auto">
+                                <polygon points="0 0, 12 4, 0 8" fill="#6B7280"/>
+                            </marker>
+                        </defs>
+                    </svg>
+                    
+                    <!-- アーキテクチャ図コンテンツ（バックエンドからデータをロード） -->
+                    <div id="architectureContent" class="loading">
+                        アーキテクチャ図を読み込み中...
+                    </div>
+                </div>
+            </section>
+
+            <!-- コード生成パネル -->
+            <section class="code-panel" id="codePanel" style="display: none;">
+                <h3>📄 生成されたコード</h3>
+                <div class="code-editor">
+                    <div class="code-header">
+                        <span>generated_code.py</span>
+                        <button class="btn btn-primary btn-sm" onclick="copyGeneratedCode()">
+                            コピー
+                        </button>
+                    </div>
+                    <div class="code-content" id="generatedCode">
+                        # コードがここに表示されます
+                    </div>
+                </div>
+                <div class="code-actions">
+                    <button class="btn btn-secondary" onclick="downloadCode()">
+                        📥 ダウンロード
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeCodePanel()">
+                        閉じる
+                    </button>
+                </div>
+            </section>
+        </section>
+    </div>
+</div>
+
+<!-- 積木詳細モーダル -->
+<div class="modal-overlay" id="blockDetailModal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalBlockName">積木詳細</h3>
+            <button class="close-modal" id="closeModalBtn">×</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <div class="loading">読み込み中...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ==============================
+    // 積木の色・アイコン定義
+    // ==============================
+    const BLOCK_COLORS = {
+        'Django_basic': '#4C56B3',
+        'python_basic': '#059669',
+        'data_model': '#dc2626',
+        'database': '#7c3aed',
+        'admin': '#ea580c',
+        'list_display': '#0891b2',
+        'url': '#0891b2',
+        'template': '#db2777',
+        'calculation': '#65a30d',
+        'add_function': '#0d9488',
+        'delete_function': '#991b1b',
+        'form': '#EC4899',
+        'view': '#8B5CF6'
+    };
+
+    const BLOCK_ICONS = {
+        'Django_basic': '🔷',
+        'python_basic': '🐍',
+        'data_model': '📊',
+        'database': '🗃️',
+        'admin': '⚙️',
+        'list_display': '📋',
+        'url': '🔗',
+        'template': '📄',
+        'calculation': '🧮',
+        'add_function': '➕',
+        'delete_function': '➖',
+        'form': '📝',
+        'view': '👁️'
+    };
+
+    // ==============================
+    //  ノードごとの「積木名ルール」
+    // ==============================
+    const NODE_BLOCK_NAME_RULES = {
+        // ===== URLルーティング層 - urls.py =====
+        url_router: [
+            'URLディスパッチャ',
+            'url_router',
+            'urls.py ルート'
+        ],
+        url_items: [
+            '/items/',
+            'items_list_url',
+            '物品一覧URL',
+            '/items/ 物品一覧' 
+        ],
+        url_crud: [
+            '/items/add',
+            '/items/edit',
+            '/items/delete',
+            'item_create_url',
+            'item_update_url',
+            'item_delete_url',
+            '物品CRUD URL',
+            '/items/add|edit|delete/ 物品CRUD操作'
+        ],
+        url_categories: [
+            '/categories/',
+            'categories_url',
+            'カテゴリー一覧URL',
+            '/categories/ カテゴリー管理'
+        ],
+
+        // ===== ビューレイヤー - views.py =====
+        item_list_view: [
+            'ItemListView',
+            'ItemListView 物品一覧表示'
+        ],
+        item_crud_views: [
+            'ItemCreateView',
+            'ItemUpdateView',
+            'ItemDeleteView',
+            'ItemCRUDView',
+            'ItemCreate/Update/DeleteView',
+            '物品CRUD操作'
+        ],
+        category_views: [
+            'CategoryListView'
+        ],
+        get_context: [
+            'get_context_data',
+            'get_context_data() 統計情報計算'
+        ],
+        form_valid: [
+            'form_valid',
+            'form_valid() フォーム検証と保存'
+        ],
+        delete_method: [
+            'delete',
+            'delete() 削除処理'
+        ],
+
+        // ===== フォームレイヤー - forms.py =====
+        item_form: [
+            'ItemForm'
+        ],
+
+        // ===== モデルレイヤー - models.py =====
+        item_model: [
+            'Item',
+            'Itemモデル'
+        ],
+
+        // ===== データベース層 =====
+        database: [
+            'SQLite',
+            'PostgreSQL',
+            'データベース',
+            'SQLite/PostgreSQL データベース',
+            'SQLiteデータベース'
+        ],
+
+        // ===== テンプレートレイヤー - templates =====
+        tpl_main: [
+            'base.html'
+        ],
+        tpl_stats: [
+            'item_list.html'
+        ],
+        tpl_form: [
+            'item_form.html'
+        ],
+        tpl_delete: [
+            'item_confirm_delete.html'
+        ],
+        tpl_category: [
+            'category_list.html'
+        ],
+        tpl_category_form: [
+            'category_form.html'
+        ],
+        tpl_category_delete: [
+            'category_confirm_delete.html'
+        ]
+    };
+
+    // 積木名の正規化：大文字小文字・余分な飾りを吸収してマッチしやすくする
+    function normalizeBlockName(name) {
+        if (!name) return '';
+        return name
+            .toString()
+            .toLowerCase()
+            .replace(/（.*?）/g, '')      // 全角カッコ内
+            .replace(/\(.*?\)/g, '')      // 半角カッコ内
+            .replace(/ビュー|view|ブロック|block/g, '') // 「〜ビュー」「〜ブロック」などを削る
+            .replace(/\s+/g, '');         // 空白を全部消す
+    }
+
+    // この積木はこの node に入ってよいか？タイプ＋名前で判定
+    function isBlockAllowedForNode(blockEl, nodeEl) {
+        if (!blockEl || !nodeEl) return false;
+
+        // ① まずタイプ（view/url/template...）をチェック（従来通り）
+        let allowedTypes = [];
+        try {
+            allowedTypes = JSON.parse(nodeEl.dataset.allowedTypes || '[]');
+        } catch (e) {
+            allowedTypes = [];
+        }
+        const blockType = blockEl.dataset.blockType;
+
+        if (allowedTypes.length > 0 && !allowedTypes.includes(blockType)) {
+            return false;
+        }
+
+        // ② 名前ルール（NODE_BLOCK_NAME_RULES）をチェック
+        const nodeId    = nodeEl.id;
+        const ruleNames = NODE_BLOCK_NAME_RULES[nodeId];
+
+        // この node に名前ルールが設定されていない場合 → タイプだけで OK（既存挙動を維持）
+        if (!ruleNames || ruleNames.length === 0) {
+            return true;
+        }
+
+        const blockNameNorm = normalizeBlockName(blockEl.dataset.blockName);
+
+        // どれか 1 個でも一致したら OK
+        return ruleNames.some(ruleName => {
+            return blockNameNorm === normalizeBlockName(ruleName);
+        });
+    }
+
+    // ==============================
+    //  グローバル変数
+    // ==============================
+    let architectureData = null;
+    let draggedBlock = null;
+    let slotAssignments = {};
+    const nodeOriginalContent = {};
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('ページ初期化を開始...');
+        initializePage();
+    });
+
+    async function initializePage() {
+        try {
+            setupBlockColorsAndIcons();
+            initializeDragAndDrop();
+            await loadArchitectureData();
+            setupFilterTabs();
+            setupBlockClickEvents();
+            setupModalEvents();
+            console.log('ページ初期化完了');
+            setTimeout(() => { drawSimplifiedConnections(); }, 500);
+        } catch (error) {
+            console.error('ページ初期化エラー:', error);
+            showMessage('ページの読み込み中にエラーが発生しました', 'error');
+        }
+    }
+
+    // ==============================
+    //  アーキテクチャ図の読み込み
+    // ==============================
+    async function loadArchitectureData() {
+        try {
+            console.log('ローカルのアーキテクチャ図データをロード中...');
+
+            // まず固定レイアウトで図を描画
+            renderArchitecture();
+
+            // ローカルストレージから前回保存した積木の配置を取得
+            const saved = localStorage.getItem('architecture_slot_assignments_v1');
+            if (saved) {
+                try {
+                    slotAssignments = JSON.parse(saved);
+                    console.log('保存済みスロット割り当てを適用します:', slotAssignments);
+                    applySavedAssignments(slotAssignments);
+                } catch (e) {
+                    console.error('ローカル保存データの読み込みに失敗しました:', e);
+                    slotAssignments = {};
+                }
+            } else {
+                console.log('ローカル保存された積木配置はありません。');
+                slotAssignments = {};
+            }
+
+            // 矢印を描画
+            drawSimplifiedConnections();
+        } catch (error) {
+            console.error('アーキテクチャ図データロードエラー:', error);
+            showMessage('ページの読み込み中にエラーが発生しました', 'error');
+        }
+    }
+
+    // ==============================
+//  保存済み割り当ての適用
+// ==============================
+function applySavedAssignments(assignments) {
+    if (!assignments) return;
+
+    Object.keys(assignments).forEach(componentId => {
+        const info = assignments[componentId];
+        if (!info) return;
+
+        let blockId   = info.block_id;
+        const blockName = info.block_name;
+
+        // block_id が無い場合は名前から探す
+        if (!blockId && blockName) {
+            document.querySelectorAll('.block-card.unlocked').forEach(card => {
+                const nameEl = card.querySelector('.block-name');
+                const name   = nameEl ? nameEl.textContent.trim() : '';
+                if (name === blockName) {
+                    blockId = card.dataset.blockId;
+                }
+            });
+        }
+
+        if (!blockId || !blockName) return;
+
+        // 既存の見た目更新関数を使ってノードに反映
+        updateComponentVisual(componentId, blockId, blockName);
+    });
+
+    // ★ ページ加载时如果本来就都填满，也显示提示
+    checkAllSlotsFilledAndShowSummary();
+}
+
+
+    // ==============================
+    //  アーキテクチャ図の描画
+    // ==============================
+    function renderArchitecture() {
+        const container = document.getElementById('architectureContent');
+        const svg = document.getElementById('connectionsContainer');
+        if (!container || !svg) return;
+
+        container.classList.remove('loading');
+        container.innerHTML = '';
+
+        // 画布幅
+        const CANVAS_W = 1550;
+        const marginX = 60;
+
+        // ===== 上部：ユーザー & HTTP =====
+        const userNode = addFloatingNode(
+            container,
+            'userNode',
+            'ユーザー/ブラウザ',
+            { x: CANVAS_W - 220, y: 40, w: 190, h: 60 }
+        );
+
+        const httpNode = addFloatingNode(
+            container,
+            'httpReq',
+            'HTTPリクエスト',
+            { x: CANVAS_W / 2 - 90, y: 120, w: 180, h: 55 }
+        );
+
+        // ===== URL ルーティング層 =====
+        const urlLayer = addLayer(
+            container,
+            'urlLayer',
+            'URLルーティング層 - urls.py',
+            'layer-green',
+            {x: marginX,y: 200,w: 1020,h: 170}
+        );
+
+        // 1 行に 4 つ並べて、重なり＆はみ出しを解消
+        addNode(
+            urlLayer,
+            'url_router',
+            'URLディスパッチャ',
+            { x: 50, y: 55, w: 220, h: 70 },
+            ['url']
+        );
+
+        addNode(
+            urlLayer,
+            'url_items',
+            '/items/<br>物品一覧',
+            { x: 300, y: 55, w: 200, h: 70 },
+            ['url']
+        );
+
+        addNode(
+            urlLayer,
+            'url_crud',
+            '/items/add|edit|delete/<br>物品CRUD操作',
+            { x: 530, y: 55, w: 260, h: 70 },
+            ['url']
+        );
+
+        // ★ /categories/ カテゴリー管理
+        addNode(
+            urlLayer,
+            'url_categories',
+            '/categories/<br>カテゴリー管理',
+            { x: 810, y: 55, w: 200, h: 70 },
+            ['url']
+        );
+
+        // ===== ビューレイヤー =====
+        const viewLayer = addLayer(
+            container,
+            'viewLayer',
+            'ビューレイヤー - views.py',
+            'layer-purple',
+            { x: marginX, y: 390, w: 950, h: 270 }
+        );
+
+        // 1段目：3 つ横並び
+        addNode(
+            viewLayer,
+            'item_list_view',
+            'ItemListView<br>物品一覧表示',
+            { x: 80, y: 70, w: 230, h: 80 },
+            ['view']
+        );
+
+        addNode(
+            viewLayer,
+            'item_crud_views',
+            'ItemCreate/Update/DeleteView<br>物品CRUD操作',
+            { x: 360, y: 70, w: 260, h: 80 },
+            ['view']
+        );
+
+        addNode(
+            viewLayer,
+            'category_views',
+            'CategoryListView<br>カテゴリー一覧',
+            { x: 660, y: 70, w: 220, h: 80 },
+            ['view']
+        );
+
+        // 2段目：補助メソッドを少し下にずらして整列
+        addNode(
+            viewLayer,
+            'get_context',
+            'get_context_data()<br>統計情報計算',
+            { x: 80, y: 175, w: 230, h: 65, cls: 'small' },   // ItemListView の真下
+            ['view']
+        );
+
+        addNode(
+            viewLayer,
+            'form_valid',
+            'form_valid()<br>フォーム検証と保存',
+            { x: 360, y: 175, w: 260, h: 65, cls: 'small' },  // CRUD ビューの真下
+            ['view']
+        );
+
+        addNode(
+            viewLayer,
+            'delete_method',
+            'delete()<br>削除処理',
+            { x: 660, y: 175, w: 220, h: 65, cls: 'small' },  // CategoryListView の下側
+            ['view']
+        );
+
+        // ===== フォームレイヤー =====
+        const formLayer = addLayer(
+            container,
+            'formLayer',
+            'フォームレイヤー - forms.py',
+            'layer-pink',
+            { x: marginX, y: 690, w: 430, h: 150 }
+        );
+
+        addNode(
+            formLayer,
+            'item_form',
+            'ItemForm<br>物品フォーム',
+            { x: 110, y: 55, w: 260, h: 80 },
+            ['form']
+        );
+
+        // ===== モデルレイヤー =====
+        const modelLayer = addLayer(
+            container,
+            'modelLayer',
+            'モデルレイヤー - models.py',
+            'layer-gray',
+            { x: 550, y: 690, w: 430, h: 150 }
+        );
+
+        addNode(
+            modelLayer,
+            'item_model',
+            'Itemモデル<br>物品データ構造',
+            { x: 110, y: 55, w: 260, h: 80 },
+            ['data_model']
+        );
+
+        // ===== データベース層 =====
+        const databaseLayer = addLayer(
+            container,
+            'databaseLayer',
+            'データベース層',
+            'layer-orange',
+            { x: 550, y: 860, w: 430, h: 130 }
+        );
+
+        addNode(
+            databaseLayer,
+            'database',
+            'SQLite/PostgreSQL<br>データベース',
+            { x: 110, y: 40, w: 260, h: 70 },
+            ['database']
+        );
+
+        // ===== テンプレートレイヤー（右側の縦長エリア） =====
+        const tplLayer = addLayer(
+            container,
+            'tplLayer',
+            'テンプレートレイヤー - templates',
+            'layer-cyan',
+            { x: 1090, y: 400, w: 420, h: 790 }
+        );
+
+        addNode(
+            tplLayer,
+            'tpl_main',
+            'base.html<br>ベーステンプレート',
+            { x: 60, y: 70, w: 310, h: 70 },
+            ['template']
+        );
+
+        addNode(
+            tplLayer,
+            'tpl_stats',
+            'item_list.html<br>物品一覧画面',
+            { x: 60, y: 160, w: 310, h: 70 },
+            ['template']
+        );
+
+        addNode(
+            tplLayer,
+            'tpl_form',
+            'item_form.html<br>物品登録/編集',
+            { x: 60, y: 250, w: 310, h: 70 },
+            ['template']
+        );
+
+        addNode(
+            tplLayer,
+            'tpl_delete',
+            'item_confirm_delete.html<br>削除確認',
+            { x: 60, y: 340, w: 310, h: 70 },
+            ['template']
+        );
+
+        addNode(
+            tplLayer,
+            'tpl_category',
+            'category_list.html<br>カテゴリー管理',
+            { x: 60, y: 430, w: 310, h: 70 },
+            ['template']
+        );
+
+        addNode(
+            tplLayer,
+            'tpl_category_form',
+            'category_form.html<br>カテゴリー登録/編集',
+            { x: 60, y: 520, w: 310, h: 70 },
+            ['template']
+        );
+
+        addNode(
+            tplLayer,
+            'tpl_category_delete',
+            'category_confirm_delete.html<br>カテゴリー削除確認',
+            { x: 60, y: 610, w: 310, h: 70 },
+            ['template']
+        );
+
+        // ドロップゾーン再設定
+        setTimeout(() => {
+            initializeComponentDropZones();
+        }, 100);
+
+        // 線の描画
+        drawSimplifiedConnections();
+    }
+
+    // ==============================
+    //  接続線の描画
+    // ==============================
+    function drawSimplifiedConnections() {
+        const svg = document.getElementById('connectionsContainer');
+        if (!svg) {
+            console.error('connectionsContainer not found');
+            return;
+        }
+        
+        svg.classList.add('diagram-svg');
+        
+        while (svg.childNodes.length > 1) {
+            if (svg.lastChild.tagName !== 'defs') {
+                svg.removeChild(svg.lastChild);
+            } else {
+                break;
+            }
+        }
+
+        if (!svg.querySelector('defs')) {
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+            marker.setAttribute('id', 'arrowhead');
+            marker.setAttribute('markerWidth', '12');
+            marker.setAttribute('markerHeight', '8');
+            marker.setAttribute('refX', '10');
+            marker.setAttribute('refY', '4');
+            marker.setAttribute('orient', 'auto');
+            
+            const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            polygon.setAttribute('points', '0 0, 12 4, 0 8');
+            polygon.setAttribute('fill', '#6B7280');
+            
+            marker.appendChild(polygon);
+            defs.appendChild(marker);
+            svg.appendChild(defs);
+        }
+
+        function line(a, b, label=null, dashed=false) {
+            const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            p.setAttribute('d', `M ${a.x} ${a.y} L ${b.x} ${b.y}`);
+            p.setAttribute('class', `arrow${dashed?' dashed':''}`);
+            p.setAttribute('marker-end', 'url(#arrowhead)');
+            p.setAttribute('stroke', dashed ? '#9CA3AF' : '#6B7280');
+            p.setAttribute('stroke-width', '3');
+            if (dashed) {
+                p.setAttribute('stroke-dasharray', '6,6');
+            }
+            svg.appendChild(p);
+            
+            if (label) {
+                const midx = (a.x+b.x)/2, midy = (a.y+b.y)/2 - 8;
+                const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                t.setAttribute('x', midx);
+                t.setAttribute('y', midy);
+                t.setAttribute('text-anchor', 'middle');
+                t.setAttribute('fill', '#374151');
+                t.setAttribute('font-size', '13px');
+                t.textContent = label;
+                svg.appendChild(t);
+            }
+        }
+
+        const user = document.getElementById('userNode');
+        const http = document.getElementById('httpReq');
+        const urlRouter = document.getElementById('url_router');
+        const urlItems = document.getElementById('url_items');
+        const urlCrud = document.getElementById('url_crud');
+        const itemListView = document.getElementById('item_list_view');
+        const itemCrudViews = document.getElementById('item_crud_views');
+        const itemForm = document.getElementById('item_form');
+        const itemModel = document.getElementById('item_model');
+        const database = document.getElementById('database');
+        const itemListTemplate = document.getElementById('tpl_stats');
+
+        if (user && http) line(leftCenterOf(user), topCenterOf(http), 'ユーザー操作');
+        if (http && urlRouter) line(bottomCenterOf(http), topCenterOf(urlRouter), 'HTTPリクエスト');
+        
+        if (urlItems && itemListView) line(bottomCenterOf(urlItems), topCenterOf(itemListView), 'GET /items/');
+        if (urlCrud && itemCrudViews) line(bottomCenterOf(urlCrud), topCenterOf(itemCrudViews), 'CRUD操作');
+        
+        if (itemCrudViews && itemForm) line(bottomCenterOf(itemCrudViews), topCenterOf(itemForm), 'フォーム処理');
+        if (itemCrudViews && itemModel) line(bottomCenterOf(itemCrudViews), topCenterOf(itemModel), 'データ操作');
+        
+        if (itemModel && database) line(bottomCenterOf(itemModel), topCenterOf(database), 'ORM操作');
+        
+        if (itemListView && itemListTemplate) {
+            line(rightCenterOf(itemListView), leftCenterOf(itemListTemplate), 'レンダリング');
+        }
+        
+        if (itemListTemplate && user) {
+            line(
+                topCenterOf(itemListTemplate),
+                bottomCenterOf(user),
+                'HTMLレスポンス',
+                true
+            );
+        }
+        
+        console.log('接続線の描画が完了しました。合計', svg.querySelectorAll('path').length, '本の線を描画しました。');
+    }
+
+    // ==============================
+    //  ノード・レイヤー生成系
+    // ==============================
+    function addLayer(container, id, title, colorCls, bbox) {
+        const el = document.createElement('div');
+        el.className = `diagram-layer ${colorCls}`;
+        el.id = id;
+        el.style.left = `${bbox.x}px`;
+        el.style.top  = `${bbox.y}px`;
+        el.style.width = `${bbox.w}px`;
+        el.style.height = `${bbox.h}px`;
+        el.innerHTML = `<div class="layer-title">${title}</div>`;
+        container.appendChild(el);
+        return el;
+    }
+
+    function addFloatingNode(container, id, text, opts) {
+        const el = document.createElement('div');
+        el.className = `node ${opts.extraCls || ''}`;
+        el.id = id;
+        el.style.left = `${opts.x}px`;
+        el.style.top  = `${opts.y}px`;
+        el.style.width = `${opts.w}px`;
+        el.style.height = `${opts.h}px`;
+        el.style.zIndex = 20;
+        el.innerHTML = text;
+        
+        if (id === 'httpReq') {
+            el.setAttribute('data-component-id', id);
+            el.setAttribute('data-component-type', 'node');
+            el.setAttribute('data-allowed-types', JSON.stringify(['url']));
+            nodeOriginalContent[id] = el.innerHTML;
+        }
+        
+        container.appendChild(el);
+        return el;
+    }
+
+    function addNode(parent, id, text, opts, allowedTypes = []) {
+        const el = document.createElement('div');
+        el.className = `node ${opts.cls || ''}`;
+        el.id = id;
+        el.style.left = `${opts.x}px`;
+        el.style.top  = `${opts.y}px`;
+        if (opts.w) el.style.width = `${opts.w}px`;
+        if (opts.h) el.style.height = `${opts.h}px`;
+        el.innerHTML = text.replace(/\\n/g, '<br/>');
+        
+        el.setAttribute('data-component-id', id);
+        el.setAttribute('data-component-type', 'node');
+        el.setAttribute('data-allowed-types', JSON.stringify(allowedTypes));
+        nodeOriginalContent[id] = el.innerHTML;
+        
+        parent.appendChild(el);
+        return el;
+    }
+
+    // ==============================
+    //  ドラッグ＆ドロップ
+    // ==============================
+    function initializeComponentDropZones() {
+        const dropZones = document.querySelectorAll('.node');
+        console.log(`${dropZones.length} 個のドロップエリアを見つけました`);
+        
+        dropZones.forEach(zone => {
+            if (zone.id === 'userNode' || zone.id === 'httpReq') {
+                return;
+            }
+
+            zone.removeEventListener('dragover', handleDragOver);
+            zone.removeEventListener('dragenter', handleDragEnter);
+            zone.removeEventListener('dragleave', handleDragLeave);
+            zone.removeEventListener('drop', handleDrop);
+            
+            zone.addEventListener('dragover', handleDragOver);
+            zone.addEventListener('dragenter', handleDragEnter);
+            zone.addEventListener('dragleave', handleDragLeave);
+            zone.addEventListener('drop', handleDrop);
+        });
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    }
+
+    // ★ タイプ＋名前で判定するように変更
+    function handleDragEnter(e) {
+        e.preventDefault();
+        if (draggedBlock) {
+            if (isBlockAllowedForNode(draggedBlock, this)) {
+                this.classList.add('drop-allowed');
+            } else {
+                this.classList.add('drop-not-allowed');
+            }
+        }
+    }
+
+    function handleDragLeave(e) {
+        if (!this.contains(e.relatedTarget)) {
+            this.classList.remove('drop-allowed', 'drop-not-allowed');
+        }
+    }
+
+    // ★ Drop 時も isBlockAllowedForNode で最終チェック
+    async function handleDrop(e) {
+        e.preventDefault();
+        this.classList.remove('drop-allowed', 'drop-not-allowed');
+        
+        if (!draggedBlock) {
+            console.log('ドラッグ中のブロックがありません');
+            return;
+        }
+        
+        const componentId = this.dataset.componentId;
+        const blockId     = draggedBlock.dataset.blockId;
+        const blockName   = draggedBlock.dataset.blockName;
+        
+        try {
+            console.log('コンポーネントに積木を配置:', {
+                componentId, blockId, blockName
+            });
+
+            // 最終チェック：タイプ＋名前
+            if (!isBlockAllowedForNode(draggedBlock, this)) {
+                const componentName = (this.textContent || 'コンポーネント').trim();
+                alert(
+                    `この積木「${blockName}」は「${componentName}」には配置できません。\n` +
+                    `対応している場所にのみ配置できます。`
+                );
+                return;
+            }
+            
+            await assignBlockToComponent(componentId, blockId, blockName, 'node');
+        } catch (error) {
+            console.error('積木配置エラー:', error);
+            showMessage('積木の配置に失敗しました', 'error');
+        }
+    }
+
+    function initializeDragAndDrop() {
+        console.log('ドラッグ＆ドロップを初期化...');
+    
+        const draggableBlocks = document.querySelectorAll('.block-card.unlocked');
+        draggableBlocks.forEach(block => {
+            block.removeEventListener('dragstart', handleBlockDragStart);
+            block.removeEventListener('dragend', handleBlockDragEnd);
+        
+            block.addEventListener('dragstart', handleBlockDragStart);
+            block.addEventListener('dragend', handleBlockDragEnd);
+        });
+    
+        initializeComponentDropZones();
+    
+        console.log('ドラッグ＆ドロップ初期化完了');
+    }
+
+    function handleBlockDragStart(e) {
+        console.log('ドラッグ開始:', this.dataset.blockName);
+        draggedBlock = this;
+    
+        e.dataTransfer.setData('text/plain', this.dataset.blockId);
+        e.dataTransfer.effectAllowed = 'move';
+    
+        this.classList.add('dragging');
+    
+        const dragImage = this.cloneNode(true);
+        dragImage.style.width = '200px';
+        dragImage.style.opacity = '0.8';
+        dragImage.style.position = 'fixed';
+        dragImage.style.left = '-1000px';
+        document.body.appendChild(dragImage);
+        e.dataTransfer.setDragImage(dragImage, 20, 20);
+    
+        setTimeout(() => {
+            if (document.body.contains(dragImage)) {
+                document.body.removeChild(dragImage);
+            }
+        }, 0);
+    }
+
+    function handleBlockDragEnd() {
+        console.log('ドラッグ終了');
+        this.classList.remove('dragging');
+        draggedBlock = null;
+    
+        document.querySelectorAll('.node').forEach(slot => {
+            slot.classList.remove('drop-allowed', 'drop-not-allowed');
+        });
+    }
+
+    // ==============================
+    //  積木の割り当て / 削除（見た目）
+    // ==============================
+    async function assignBlockToComponent(componentId, blockId, blockName, componentType = 'node') {
+        console.log('コンポーネントに積木を割り当て:', {componentId, blockId, blockName, componentType});
+        
+        try {
+            // 今は「見た目だけ更新」モード（バックエンドを触らない）
+            if (componentType === 'node') {
+                updateComponentVisual(componentId, blockId, blockName);
+                showMessage(`積木「${blockName}」を配置しました`, 'success');
+                return;
+            }
+            
+            const csrfToken = getCookie('csrftoken');
+            const response = await fetch('/api/assign-block-to-slot/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    component_id: componentId,
+                    block_id: blockId,
+                    component_type: componentType
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                updateComponentVisual(componentId, blockId, blockName);
+                showMessage('積木の割り当てに成功しました', 'success');
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            console.error('積木割り当てエラー:', error);
+            showMessage('積木の割り当てに失敗しました: ' + error.message, 'error');
+        }
+    }
+
+    function updateComponentVisual(componentId, blockId, blockName) {
+        const componentElement = document.querySelector(`[data-component-id="${componentId}"]`);
+        if (componentElement) {
+            const blockElement = document.querySelector(`[data-block-id="${blockId}"]`);
+            const blockType = blockElement ? blockElement.dataset.blockType : null;
+            const color = blockType ? (BLOCK_COLORS[blockType] || '#64748b') : '#64748b';
+            const icon = blockType ? (BLOCK_ICONS[blockType] || '🧩') : '🧩';
+            
+            componentElement.innerHTML = `
+                <div class="assigned-block">
+                    <div class="block-info">
+                        <div class="block-icon-small" style="background: ${color}">${icon}</div>
+                        <span class="block-name-small">${blockName}</span>
+                    </div>
+                    <button class="remove-block" onclick="removeBlockFromComponent('${componentId}')">×</button>
+                </div>
+            `;
+            
+            const removeBtn = componentElement.querySelector('.remove-block');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    removeBlockFromComponent(componentId);
+                });
+            }
+
+            // ★ 新配置一个积木 → 检查是否全部填满
+            checkAllSlotsFilledAndShowSummary();
+        }
+    }
+
+
+    async function removeBlockFromComponent(componentId) {
+        if (!confirm('この位置から積木を削除してもよろしいですか？')) {
+            return;
+        }
+        
+        console.log('コンポーネントから積木を削除:', componentId);
+        
+        try {
+            const componentElement = document.querySelector(`[data-component-id="${componentId}"]`);
+            if (componentElement && nodeOriginalContent[componentId]) {
+                componentElement.innerHTML = nodeOriginalContent[componentId];
+                showMessage('積木を削除しました', 'success');
+                // ★ 删除后也检查一次
+                checkAllSlotsFilledAndShowSummary();
+            } else {
+                showMessage('削除に失敗しました', 'error');
+            }
+        } catch (error) {
+            console.error('積木削除エラー:', error);
+            showMessage('積木の削除に失敗しました: ' + error.message, 'error');
+        }
+    }
+
+    // ==============================
+    //  ブロック一覧・モーダル・フィルタ
+    // ==============================
+    function setupBlockColorsAndIcons() {
+        const blockCards = document.querySelectorAll('.block-card');
+        
+        blockCards.forEach(card => {
+            const blockType = card.dataset.blockType;
+            const color = BLOCK_COLORS[blockType] || '#64748b';
+            const icon = BLOCK_ICONS[blockType] || '🧩';
+            
+            card.style.setProperty('--block-color', color);
+            
+            const iconElement = card.querySelector('.block-icon');
+            if (iconElement) {
+                iconElement.textContent = icon;
+                iconElement.style.backgroundColor = color;
+            }
+            
+            const typeElement = card.querySelector('.block-type');
+            if (typeElement) {
+                typeElement.style.backgroundColor = color;
+            }
+        });
+    }
+
+    function setupBlockClickEvents() {
+        const blockCards = document.querySelectorAll('.block-card.unlocked');
+        console.log(`${blockCards.length} 個のクリック可能な積木を見つけました`);
+        
+        blockCards.forEach(card => {
+            card.removeEventListener('click', handleBlockClick);
+            card.addEventListener('click', handleBlockClick);
+        });
+    }
+
+    function handleBlockClick(event) {
+        if (event.target.classList.contains('remove-block') || 
+            event.target.closest('.remove-block') ||
+            event.target.classList.contains('block-type') ||
+            this.classList.contains('locked')) {
+            return;
+        }
+        
+        const blockId = this.dataset.blockId;
+        console.log('積木をクリック:', blockId);
+        showBlockDetail(blockId);
+    }
+
+    function setupFilterTabs() {
+        const tabs = document.querySelectorAll('.filter-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                tabs.forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                const filter = this.dataset.filter;
+                filterBlocks(filter);
+            });
+        });
+    }
+
+    function filterBlocks(filter) {
+        const blocks = document.querySelectorAll('.block-card');
+        blocks.forEach(block => {
+            switch(filter) {
+                case 'all':
+                    block.style.display = 'block';
+                    break;
+                case 'unlocked':
+                    block.style.display = block.classList.contains('unlocked') ? 'block' : 'none';
+                    break;
+                case 'locked':
+                    block.style.display = block.classList.contains('locked') ? 'block' : 'none';
+                    break;
+            }
+        });
+    }
+
+    function setupModalEvents() {
+        const modal = document.getElementById('blockDetailModal');
+        const closeBtn = document.getElementById('closeModalBtn');
+        
+        if (!modal || !closeBtn) {
+            console.error('モーダル要素が見つかりません');
+            return;
+        }
+        
+        closeBtn.addEventListener('click', closeBlockDetail);
+        
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                closeBlockDetail();
+            }
+        });
+        
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeBlockDetail();
+            }
+        });
+        
+        console.log('モーダルイベント設定完了');
+    }
+
+    async function showBlockDetail(blockId) {
+        console.log('積木詳細を表示:', blockId);
+    
+        const modal = document.getElementById('blockDetailModal');
+        const modalBody = document.getElementById('modalBody');
+    
+        if (!modal || !modalBody) {
+            console.error('モーダル要素が見つかりません');
+            showMessage('ページの読み込みに問題があります。再読み込みしてください。', 'error');
+            return;
+        }
+    
+        modalBody.innerHTML = '<div class="loading">読み込み中...</div>';
+        modal.style.display = 'flex';
+    
+        try {
+            const apiUrl = `/api/block-detail/${blockId}/`;
+            console.log('API URL:', apiUrl);
+
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                updateModalContent(data.block);
+            } else {
+                console.error('API返却失敗:', data.message);
+                showMessage(data.message || '積木詳細の取得に失敗しました', 'error');
+                closeBlockDetail();
+            }
+        } catch (error) {
+            console.error('APIリクエスト失敗:', error);
+            useMockData(blockId);
+        }
+    }
+
+    function updateModalContent(blockData) {
+        console.log('モーダルコンテンツを更新:', blockData);
+        
+        const modalBody = document.getElementById('modalBody');
+        const modalTitle = document.getElementById('modalBlockName');
+        
+        if (!modalBody || !modalTitle) {
+            console.error('モーダル要素が見つかりません');
+            return;
+        }
+        
+        const color = BLOCK_COLORS[blockData.block_type] || '#64748b';
+        
+        modalTitle.textContent = blockData.name || '積木詳細';
+        
+        modalBody.innerHTML = `
+            <div class="block-detail-section">
+                <h4>基本情報</h4>
+                <p>${blockData.description || '説明はまだ設定されていません'}</p>
+                <div class="block-badge" style="background: ${color}20; color: ${color}">${blockData.block_type_display || 'タイプ未設定'}</div>
+            </div>
+            
+            <div class="block-detail-section">
+                <h4>知識拡張</h4>
+                <div class="expand-knowledge">
+                    ${blockData.expand_knowledge || '<p class="no-content">拡張知識はまだ設定されていません</p>'}
+                </div>
+            </div>
+            
+            ${blockData.usage_examples && blockData.usage_examples !== '// 使用例はまだ設定されていません' ? `
+            <div class="block-detail-section">
+                <h4>使用例</h4>
+                <div class="expand-knowledge">
+                    <pre><code>${blockData.usage_examples}</code></pre>
+                </div>
+            </div>
+            ` : ''}
+        `;
+        
+        console.log('モーダルコンテンツ更新完了');
+    }
+
+    function useMockData(blockId) {
+        console.log('モックデータを使用:', blockId);
+        
+        const mockData = {
+            name: 'モック積木 ' + blockId,
+            description: 'これはモック積木の説明です。実際のデータを取得できませんでした。',
+            block_type_display: 'Django基礎',
+            expand_knowledge: '<p>これはこの積木に関する拡張知識です。</p><p>実際のデータベースから情報を取得できませんでした。</p>',
+            usage_examples: '# 使用例\nprint("Hello, World!")'
+        };
+        
+        updateModalContent(mockData);
+    }
+
+    function closeBlockDetail() {
+        const modal = document.getElementById('blockDetailModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+// ==============================
+//  アーキテクチャ図の保存（ローカル保存版）
+// ==============================
+async function saveArchitecture() {
+    try {
+        // 画面上の現在の割り当てを取得
+        const currentAssignments = getCurrentSlotAssignments();
+
+        if (Object.keys(currentAssignments).length === 0) {
+            if (!confirm('まだ積木が配置されていません。空の状態で保存しますか？')) {
+                return;
+            }
+        }
+
+        slotAssignments = currentAssignments;
+
+        // ローカルストレージに保存
+        localStorage.setItem(
+            'architecture_slot_assignments_v1',
+            JSON.stringify(currentAssignments)
+        );
+
+        console.log('ローカルに保存しました:', currentAssignments);
+        showMessage('アーキテクチャ図を保存しました（このブラウザに記録されます）', 'success');
+    } catch (error) {
+        console.error('保存エラー:', error);
+        showMessage(`アーキテクチャ図の保存に失敗しました: ${error.message}`, 'error');
+    }
+}
+
+    function getCurrentSlotAssignments() {
+        const assignments = {};
+        let hasAssignments = false;
+    
+        const nodes = document.querySelectorAll('.node');
+        nodes.forEach(node => {
+            const componentId = node.dataset.componentId;
+            const assignedBlock = node.querySelector('.assigned-block');
+        
+            if (assignedBlock && componentId) {
+                const blockNameElement = assignedBlock.querySelector('.block-name-small');
+                if (blockNameElement) {
+                    const blockName = blockNameElement.textContent;
+                    let blockId = null;
+                
+                    document.querySelectorAll('.block-card.unlocked').forEach(card => {
+                        const cardName = card.querySelector('.block-name').textContent;
+                        if (cardName === blockName) {
+                            blockId = card.dataset.blockId;
+                        }
+                    });
+                
+                    assignments[componentId] = {
+                        block_id: blockId,
+                        block_name: blockName,
+                        component_id: componentId
+                    };
+                    hasAssignments = true;
+                }
+            }
+        });
+    
+        console.log('当前槽位分配:', assignments);
+        return hasAssignments ? assignments : {};
+    }
+
+function checkAllSlotsFilledAndShowSummary() {
+        const msgBox = document.getElementById('completionMessage');
+        if (!msgBox) return;
+
+        // 只看真正的“槽位”节点：有 data-component-id 的 node
+        // （httpReq/userNode 不算，前面已经禁止拖拽）
+        const slots = Array.from(document.querySelectorAll('.node[data-component-id]'))
+            .filter(slot => slot.id !== 'httpReq' && slot.id !== 'userNode');
+
+        if (slots.length === 0) {
+            msgBox.style.display = 'none';
+            return;
+        }
+
+        const allFilled = slots.every(slot => {
+            return !!slot.querySelector('.assigned-block');
+        });
+
+        msgBox.style.display = allFilled ? 'block' : 'none';
+}
+// ==============================
+//  アーキテクチャ図のリセット（ローカル保存もクリア）
+// ==============================
+async function resetArchitecture() {
+    if (!confirm('アーキテクチャ図をリセットしてもよろしいですか？すべての積木割り当てが削除されます。')) {
+        return;
+    }
+
+    console.log('アーキテクチャをリセット...');
+
+    try {
+        const nodes = document.querySelectorAll('.node');
+        nodes.forEach(node => {
+            const componentId = node.dataset.componentId;
+            if (componentId && nodeOriginalContent[componentId]) {
+                node.innerHTML = nodeOriginalContent[componentId];
+            }
+        });
+
+        slotAssignments = {};
+
+        // ローカル保存も削除
+        localStorage.removeItem('architecture_slot_assignments_v1');
+
+        // ★ 重置之后提示消失
+        checkAllSlotsFilledAndShowSummary();
+
+        showMessage('アーキテクチャ図をリセットしました', 'success');
+    } catch (error) {
+        console.error('リセット中にエラー:', error);
+        showMessage('リセット中にエラーが発生しました', 'error');
+    }
+}
+
+
+    async function generateCode() {
+        console.log('コードを生成...');
+        
+        try {
+            const csrfToken = getCookie('csrftoken');
+            const response = await fetch('/api/generate-architecture-code/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                document.getElementById('generatedCode').textContent = data.generated_code;
+                document.getElementById('codePanel').style.display = 'block';
+                showMessage('コードを生成しました', 'success');
+            } else {
+                showMessage(data.message || 'コード生成に失敗しました', 'error');
+            }
+        } catch (error) {
+            console.error('コード生成エラー:', error);
+            const generatedCode = `# 生成されたDjangoコード\n\nfrom django.db import models\nfrom django.urls import path\nfrom django.shortcuts import render\n\n# アイテムモデル\nclass Item(models.Model):\n    name = models.CharField(max_length=200, verbose_name="アイテム名")\n    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="価格")\n    \n    def __str__(self):\n        return self.name\n\n# アイテムリストビュー\ndef item_list(request):\n    items = Item.objects.all()\n    return render(request, 'items/list.html', {'items': items})`;
+            
+            document.getElementById('generatedCode').textContent = generatedCode;
+            document.getElementById('codePanel').style.display = 'block';
+            showMessage('コードを生成しました（デモデータ）', 'success');
+        }
+    }
+
+    function copyGeneratedCode() {
+        const generatedCode = document.getElementById('generatedCode');
+        if (!generatedCode) {
+            console.error('生成コード要素が見つかりません');
+            showMessage('コピーするコードが見つかりません', 'error');
+            return;
+        }
+        
+        const code = generatedCode.textContent || generatedCode.innerText;
+        
+        navigator.clipboard.writeText(code).then(() => {
+            console.log('コードをクリップボードにコピーしました');
+            showMessage('コードをクリップボードにコピーしました', 'success');
+        }).catch(err => {
+            console.error('クリップボードへのコピーに失敗:', err);
+            showMessage('コピーに失敗しました。手動でコードを選択してコピーしてください。', 'error');
+        });
+    }
+
+    function downloadCode() {
+        const generatedCode = document.getElementById('generatedCode');
+        if (!generatedCode) {
+            showMessage('ダウンロードするコードが見つかりません', 'error');
+            return;
+        }
+        
+        const code = generatedCode.textContent || generatedCode.innerText;
+        const blob = new Blob([code], { type: 'text/x-python' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'generated_code.py';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showMessage('コードをダウンロードしました', 'success');
+    }
+
+    function closeCodePanel() {
+        const codePanel = document.getElementById('codePanel');
+        if (codePanel) {
+            codePanel.style.display = 'none';
+        }
+    }
+
+    function useFallbackArchitectureData() {
+        architectureData = {};
+        renderArchitecture();
+        drawSimplifiedConnections();
+    }
+
+    // ==============================
+    //  ユーティリティ
+    // ==============================
+    function showMessage(message, type) {
+        const messageEl = document.createElement('div');
+        messageEl.textContent = message;
+        messageEl.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 14px 22px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        `;
+        
+        if (type === 'success')      messageEl.style.background = 'var(--success-500)';
+        else if (type === 'error')   messageEl.style.background = 'var(--error-500)';
+        else                         messageEl.style.background = 'var(--primary-500)';
+        
+        document.body.appendChild(messageEl);
+        
+        setTimeout(() => {
+            messageEl.style.opacity = '0';
+            setTimeout(() => {
+                if (messageEl.parentNode) {
+                    messageEl.parentNode.removeChild(messageEl);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    window.addEventListener('resize', function() {
+        drawSimplifiedConnections();
+    });
+
+    function centerOf(el) {
+        const p = el.getBoundingClientRect();
+        const host = el.closest('.canvas-container') || document.body;
+        const base = host.getBoundingClientRect();
+        return { x: p.left - base.left + p.width/2, y: p.top - base.top + p.height/2 };
+    }
+    function rightCenterOf(el) {
+        const p = el.getBoundingClientRect();
+        const host = el.closest('.canvas-container') || document.body;
+        const base = host.getBoundingClientRect();
+        return { x: p.left - base.left + p.width, y: p.top - base.top + p.height/2 };
+    }
+    function leftCenterOf(el) {
+        const p = el.getBoundingClientRect();
+        const host = el.closest('.canvas-container') || document.body;
+        const base = host.getBoundingClientRect();
+        return { x: p.left - base.left, y: p.top - base.top + p.height/2 };
+    }
+    function bottomCenterOf(el) {
+        const p = el.getBoundingClientRect();
+        const host = el.closest('.canvas-container') || document.body;
+        const base = host.getBoundingClientRect();
+        return { x: p.left - base.left + p.width/2, y: p.top - base.top + p.height };
+    }
+    function topCenterOf(el) {
+        const p = el.getBoundingClientRect();
+        const host = el.closest('.canvas-container') || document.body;
+        const base = host.getBoundingClientRect();
+        return { x: p.left - base.left + p.width/2, y: p.top - base.top };
+    }
+</script>
+{% endblock %}

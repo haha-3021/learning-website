@@ -1,0 +1,405 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}マイルストーン - Python記物本学習システム{% endblock %}
+
+{% block extra_css %}
+<style>
+.level-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.level-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.level-badge {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 15px;
+    display: inline-block;
+    font-size: 2rem;
+    font-weight: bold;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    animation: glow 2s infinite alternate;
+}
+
+@keyframes glow {
+    from { box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4); }
+    to { box-shadow: 0 4px 25px rgba(255, 215, 0, 0.8); }
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #4CAF50;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.progress-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.exp-bar {
+    background: #e9ecef;
+    border-radius: 10px;
+    height: 20px;
+    margin: 1rem 0;
+    overflow: hidden;
+}
+
+.exp-fill {
+    background: linear-gradient(90deg, #4CAF50, #45a049);
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.5s ease;
+    position: relative;
+}
+
+.exp-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.exp-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* 徽章系统样式 */
+.badges-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.badges-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.badge-card {
+    background: white;
+    border-radius: 20px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    border: 3px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.badge-card.unlocked {
+    border-color: #4CAF50;
+    background: linear-gradient(135deg, #f8fff8, #e8f5e8);
+}
+
+.badge-card.locked {
+    opacity: 0.7;
+    background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+}
+
+.badge-card.unlocked::before {
+    content: '✓ 獲得済み';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #4CAF50;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
+.badge-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.badge-name {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.badge-description {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+
+.badge-requirements {
+    background: rgba(0,0,0,0.05);
+    padding: 0.8rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+}
+
+.requirement {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.3rem;
+    font-size: 0.8rem;
+}
+
+.requirement:last-child {
+    margin-bottom: 0;
+}
+
+.requirement-label {
+    color: #666;
+}
+
+.requirement-value {
+    font-weight: bold;
+    color: #333;
+}
+
+.progress-bar {
+    background: #e9ecef;
+    border-radius: 5px;
+    height: 6px;
+    margin-top: 0.3rem;
+    overflow: hidden;
+}
+
+.progress-fill {
+    background: linear-gradient(90deg, #4CAF50, #45a049);
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.5s ease;
+}
+
+.unlock-date {
+    color: #4CAF50;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-top: 0.5rem;
+}
+
+.badge-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.badges-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.badges-count {
+    background: #4CAF50;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.back-to-home {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    padding: 0.8rem 2rem;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="level-container">
+    <div class="level-header">
+        <div class="level-badge">
+            Lv. {{ profile.level }}
+        </div>
+        <h1>レベルプロファイル</h1>
+        <p>学習の進捗状況と達成状況</p>
+    </div>
+
+    <!-- 統計情報 -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ level_info.experience }}</div>
+            <div class="stat-label">総経験値</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ level_info.chapters_completed }}/{{ level_info.total_chapters }}</div>
+            <div class="stat-label">完了章数</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ level_info.exp_required_next }}</div>
+            <div class="stat-label">次のレベルまで</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ level_info.total_score }}</div>
+            <div class="stat-label">累計得点</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ profile.total_chapters_completed }}</div>
+            <div class="stat-label">総完了章数</div>
+        </div>
+    </div>
+
+    <!-- 経験値バー -->
+    <div class="progress-section">
+        <h3>レベル進行状況</h3>
+        <div class="exp-bar">
+            <div class="exp-fill" style="width: {{ level_info.exp_progress }}%"></div>
+        </div>
+        <div class="exp-info">
+            <span>Lv. {{ profile.level }}</span>
+            <span>{{ level_info.exp_current_level }} / {{ level_info.exp_required_next }} EXP</span>
+            <span>Lv. {{ profile.level|add:1 }}</span>
+        </div>
+    </div>
+
+    <!-- 徽章系统 -->
+    <div class="badges-section">
+        <div class="badges-header">
+            <h3>獲得バッジ</h3>
+            <div class="badges-count">
+                {{ unlocked_count }} / {{ badges_with_progress|length }} 個獲得
+            </div>
+        </div>
+    
+        <div class="badges-grid">
+            {% for badge_data in badges_with_progress %}
+            <div class="badge-card {% if badge_data.is_unlocked %}unlocked{% else %}locked{% endif %}">
+                <div class="badge-icon">{{ badge_data.badge.icon }}</div>
+                <div class="badge-name">{{ badge_data.badge.name }}</div>
+                <div class="badge-description">{{ badge_data.badge.description }}</div>
+        
+                <div class="badge-requirements">
+                    {% if badge_data.badge.required_experience > 0 %}
+                    <div class="requirement">
+                        <span class="requirement-label">必要経験値:</span>
+                        <span class="requirement-value">{{ profile.experience }} / {{ badge_data.badge.required_experience }}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 
+                            {% if badge_data.is_unlocked %}100
+                            {% else %}{% widthratio profile.experience badge_data.badge.required_experience 100 %}%{% endif %}">
+                        </div>
+                    </div>
+                    {% endif %}
+            
+                    {% if badge_data.badge.required_level > 0 %}
+                    <div class="requirement">
+                        <span class="requirement-label">必要レベル:</span>
+                        <span class="requirement-value">{{ profile.level }} / {{ badge_data.badge.required_level }}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 
+                            {% if badge_data.is_unlocked %}100
+                            {% else %}{% widthratio profile.level badge_data.badge.required_level 100 %}%{% endif %}">
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if badge_data.badge.required_chapters > 0 %}
+                    <div class="requirement">
+                        <span class="requirement-label">完了章数:</span>
+                        <span class="requirement-value">{{ profile.total_chapters_completed }} / {{ badge_data.badge.required_chapters }}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 
+                            {% if badge_data.is_unlocked %}100
+                            {% else %}{% widthratio profile.total_chapters_completed badge_data.badge.required_chapters 100 %}%{% endif %}">
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+        
+                {% if badge_data.is_unlocked and badge_data.unlocked_at %}
+                <div class="unlock-date">
+                    獲得日: {{ badge_data.unlocked_at|date:"Y年m月d日" }}
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="no-badges-message" style="grid-column: 1 / -1; text-align: center; padding: 2rem;">
+                <p style="font-size: 1.2rem; color: #666;">まだバッジが設定されていません。</p>
+                <p style="color: #999; margin-top: 0.5rem;">管理者にバッジの設定を依頼してください。</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="back-to-home">
+        <a href="{% url 'home' %}" class="btn">ホームに戻る</a>
+    </div>
+</div>
+{% endblock %}

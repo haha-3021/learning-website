@@ -1,0 +1,74 @@
+/* 欢迎区域样式 */
+.welcome-section {
+    margin-bottom: 2rem;
+}
+
+.welcome-section h2 {
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.8rem;
+}
+
+.learning-objectives h3 {
+    color: #4CAF50;
+    margin-bottom: 1rem;
+}
+
+.learning-objectives ul {
+    margin: 1rem 0 2rem 2rem;
+}
+
+.learning-objectives li {
+    margin-bottom: 0.5rem;
+    list-style-type: disc;
+}
+
+/* 章节列表样式 */
+.chapter-list {
+    margin: 2rem 0;
+}
+
+.chapter-list h2 {
+    margin-bottom: 1.5rem;
+    color: #333;
+    font-size: 1.6rem;
+}
+
+.chapter-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border-left: 5px solid #4CAF50;
+    margin-bottom: 1.5rem;
+}
+
+.chapter-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+}
+
+.chapter-card h3 {
+    color: #4CAF50;
+    margin-bottom: 1rem;
+    font-size: 1.4rem;
+}
+
+/* 系统要求样式 */
+.system-requirements h3 {
+    color: #4CAF50;
+    margin-bottom: 1rem;
+}
+
+.system-requirements div {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.system-requirements p {
+    margin-bottom: 0.5rem;
+}

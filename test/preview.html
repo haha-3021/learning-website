@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>系统架构图预览（固定布局）</title>
+<style>
+:root{
+  --grid:#eef2f7;
+  --stroke:#6B7280;
+}
+body{margin:0;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";background:#f7fafc;color:#111827;}
+.wrap{padding:18px;}
+.hdr{margin:0 0 12px 0;font-weight:800;font-size:18px;color:#111827}
+.canvas-container{
+  position:relative;
+  height:880px; /* 足够容纳图 */
+  border-radius:14px;
+  border:2px dashed #e5e7eb;
+  background:
+     linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+     linear-gradient(var(--grid) 1px, transparent 1px);
+  background-size:28px 28px;
+  box-shadow:0 8px 24px -10px rgba(0,0,0,.2);
+  overflow:hidden;
+}
+#connectionsContainer{position:absolute;inset:0;pointer-events:none;z-index:5}
+#architectureContent{position:absolute;inset:0;}
+
+/* ==== 固定レイアウトのアーキテクチャ図 ==== */
+.diagram-layer {
+    position: absolute;
+    border-radius: 14px;
+    padding: 16px 16px 26px;
+    box-shadow: 0 6px 18px -6px rgba(0,0,0,.2);
+    border: 2px solid rgba(0,0,0,.06);
+}
+.layer-title {
+    font-weight: 800;
+    margin: 0 0 10px 0;
+    font-size: 0.95rem;
+    color: #111827;
+    opacity: .9;
+}
+.node {
+    position: absolute;
+    min-width: 150px;
+    min-height: 44px;
+    background: #ffffff;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 8px 10px;
+    box-shadow: 0 6px 16px -8px rgba(0,0,0,0.15);
+    font-weight: 600;
+    color: #374151;
+    text-align:center;
+}
+.node.small { min-width: 120px; min-height: 38px; font-weight: 600; }
+.node.tiny { min-width: 110px; min-height: 34px; font-size: .85rem; }
+.node-label-sub { font-size: .78rem; color: #6b7280; margin-left: 6px; font-weight: 500; }
+
+/* layer colors */
+.layer-purple { background: rgba(124,58,237,.08); border-color: rgba(124,58,237,.35); }
+.layer-green  { background: rgba(16,185,129,.1);  border-color: rgba(16,185,129,.35); }
+.layer-cyan   { background: rgba(6,182,212,.1);   border-color: rgba(6,182,212,.35); }
+.layer-orange { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.4); }
+.layer-pink   { background: rgba(236,72,153,.1);  border-color: rgba(236,72,153,.35); }
+
+/* connection styles */
+.diagram-svg .arrow { stroke: var(--stroke); stroke-width: 2; fill: none; }
+.diagram-svg .arrow.dashed { stroke-dasharray: 6 6; stroke: #9CA3AF; }
+.diagram-svg text { font-size: 12px; fill: #374151; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+.diagram-svg text tspan{stroke:none}
+.badge{display:inline-block;background:#111827;color:#fff;border-radius:999px;padding:2px 8px;font-size:12px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="hdr">系统架构图预览（固定布局）</h1>
+    <div class="canvas-container" id="canvasContainer">
+      <svg id="connectionsContainer" class="diagram-svg" width="100%" height="100%">
+        <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#6B7280"/>
+            </marker>
+        </defs>
+      </svg>
+      <div id="architectureContent"></div>
+    </div>
+  </div>
+
+<script>
+function addLayer(container, id, title, colorCls, bbox) {
+    const el = document.createElement('div');
+    el.className = `diagram-layer ${colorCls}`;
+    el.id = id;
+    el.style.left = `${bbox.x}px`;
+    el.style.top  = `${bbox.y}px`;
+    el.style.width = `${bbox.w}px`;
+    el.style.height = `${bbox.h}px`;
+    el.innerHTML = `<div class="layer-title">${title}</div>`;
+    container.appendChild(el);
+    return el;
+}
+function addNode(parent, id, text, opts) {
+    const el = document.createElement('div');
+    el.className = `node ${opts.cls || ''}`;
+    el.id = id;
+    el.style.left = `${opts.x}px`;
+    el.style.top  = `${opts.y}px`;
+    if (opts.w) el.style.width = `${opts.w}px`;
+    if (opts.h) el.style.height = `${opts.h}px`;
+    el.innerHTML = text.replace(/\n/g, '<br/>');
+    parent.appendChild(el);
+    return el;
+}
+function addFloatingNode(container, id, text, opts) {
+    const el = document.createElement('div');
+    el.className = `node ${opts.extraCls || ''}`;
+    el.id = id;
+    el.style.left = `${opts.x}px`;
+    el.style.top  = `${opts.y}px`;
+    el.style.width = `${opts.w}px`;
+    el.style.height = `${opts.h}px`;
+    el.style.zIndex = 20;
+    el.innerHTML = text;
+    container.appendChild(el);
+    return el;
+}
+function centerOf(el) {
+    const p = el.getBoundingClientRect();
+    const host = document.getElementById('canvasContainer');
+    const base = host.getBoundingClientRect();
+    return { x: p.left - base.left + p.width/2, y: p.top - base.top + p.height/2 };
+}
+function rightCenterOf(el) {
+    const p = el.getBoundingClientRect();
+    const host = document.getElementById('canvasContainer');
+    const base = host.getBoundingClientRect();
+    return { x: p.left - base.left + p.width, y: p.top - base.top + p.height/2 };
+}
+function leftCenterOf(el) {
+    const p = el.getBoundingClientRect();
+    const host = document.getElementById('canvasContainer');
+    const base = host.getBoundingClientRect();
+    return { x: p.left - base.left, y: p.top - base.top + p.height/2 };
+}
+function bottomCenterOf(el) {
+    const p = el.getBoundingClientRect();
+    const host = document.getElementById('canvasContainer');
+    const base = host.getBoundingClientRect();
+    return { x: p.left - base.left + p.width/2, y: p.top - base.top + p.height };
+}
+function topCenterOf(el) {
+    const p = el.getBoundingClientRect();
+    const host = document.getElementById('canvasContainer');
+    const base = host.getBoundingClientRect();
+    return { x: p.left - base.left + p.width/2, y: p.top - base.top };
+}
+
+function renderArchitecture() {
+    const container = document.getElementById('architectureContent');
+    const svg = document.getElementById('connectionsContainer');
+    if (!container || !svg) return;
+
+    container.innerHTML = '';
+
+    // 画布宽度
+    const host = document.getElementById('canvasContainer');
+    const CANVAS_W = host.clientWidth || 1400;
+    const marginX = 60;
+
+    // 顶部：用户/浏览器 & HTTP请求
+    const userNode = addFloatingNode(container, 'userNode', '用户/浏览器', {x: CANVAS_W - 220, y: 40, w: 140, h: 40});
+    const httpNode = addFloatingNode(container, 'httpReq', 'HTTP请求', {x: CANVAS_W/2 - 60, y: 90, w: 120, h: 36, extraCls:'tiny'});
+
+    // URL路由层（紫）
+    const urlLayer = addLayer(container, 'urlLayer', 'URL路由层 - urls.py', 'layer-purple',
+                              {x: marginX, y: 140, w: CANVAS_W - marginX*2, h: 180});
+    addNode(urlLayer, 'url_dispatcher', 'URL分发器', {x: 120, y: 36, w: 160});
+    addNode(urlLayer, 'path_items', '/items/ - 物品列表', {x: 360, y: 36, w: 170});
+    addNode(urlLayer, 'path_add', '/items/add/ - 添加物品', {x: 570, y: 36, w: 190});
+    addNode(urlLayer, 'path_delete', '/items/delete/ - 删除物品', {x: 810, y: 36, w: 210});
+
+    // 视图层（绿）
+    const viewLayer = addLayer(container, 'viewLayer', '视图层 - views.py', 'layer-green',
+                               {x: marginX+40, y: 340, w: CANVAS_W - (marginX+40)*2, h: 200});
+    addNode(viewLayer, 'create_view', 'ItemCreateView\n添加物品视图', {x: 80, y: 40, w: 180});
+    addNode(viewLayer, 'delete_view', 'ItemDeleteView\n删除物品视图', {x: 320, y: 40, w: 190});
+    addNode(viewLayer, 'list_view', 'ItemListView\n物品列表视图', {x: 580, y: 40, w: 190});
+    addNode(viewLayer, 'get_query', 'get_queryset()\nget_context_data()', {x: 820, y: 28, w: 220, cls:'small'});
+    addNode(viewLayer, 'form_valid', 'form_valid()\n处理表单数据', {x: 1080, y: 28, w: 180, cls:'small'});
+    addNode(viewLayer, 'delete_method', 'delete()\n执行删除', {x: 1080, y: 98, w: 160, cls:'small'});
+
+    // 表单层（青绿）
+    const formLayer = addLayer(container, 'formLayer', '表单层 - forms.py', 'layer-cyan',
+                               {x: marginX+40, y: 560, w: 350, h: 180});
+    addNode(formLayer, 'item_form', 'ItemForm\n物品表单', {x: 80, y: 50, w: 170});
+
+    // 模型层（橙）
+    const modelLayer = addLayer(container, 'modelLayer', '模型层 - models.py', 'layer-orange',
+                                {x: marginX+430, y: 560, w: 420, h: 200});
+    addNode(modelLayer, 'item_model', 'Item模型类', {x: 90, y: 48, w: 160});
+    addNode(modelLayer, 'model_fields', 'name, price,\npurchase_date,\ndaily_consumption', {x: 270, y: 22, w: 140, cls:'small'});
+    addNode(modelLayer, 'model_methods', 'save(), delete(),\n计算总价, 计算总损耗', {x: 270, y: 96, w: 140, cls:'small'});
+    addNode(modelLayer, 'db', '（数据库）\nSQLite / PostgreSQL', {x: 130, y: 120, w: 180, cls:'small'});
+
+    // 模板层（粉）
+    const tplLayer = addLayer(container, 'tplLayer', '模板层 - templates/', 'layer-pink',
+                              {x: CANVAS_W - marginX - 420, y: 560, w: 360, h: 200});
+    addNode(tplLayer, 'tpl_main', 'item_list.html\n主页模板', {x: 70, y: 48, w: 170});
+    addNode(tplLayer, 'tpl_stats', '统计信息部分', {x: 220, y: 110, w: 110, cls:'tiny'});
+
+    drawConnections();
+}
+
+function drawConnections() {
+    const svg = document.getElementById('connectionsContainer');
+    if (!svg) return;
+    svg.innerHTML = `
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#6B7280"/>
+        </marker>
+      </defs>
+    `;
+
+    function line(a, b, label=null, dashed=false) {
+        const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        p.setAttribute('d', `M ${a.x} ${a.y} L ${b.x} ${b.y}`);
+        p.setAttribute('class', `arrow${dashed?' dashed':''}`);
+        p.setAttribute('marker-end', 'url(#arrowhead)');
+        svg.appendChild(p);
+        if (label) {
+            const midx = (a.x+b.x)/2, midy = (a.y+b.y)/2 - 6;
+            const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            t.setAttribute('x', midx); t.setAttribute('y', midy);
+            t.setAttribute('text-anchor', 'middle');
+            t.innerHTML = `<tspan>${label}</tspan>`;
+            svg.appendChild(t);
+        }
+    }
+
+    const get = (id)=>document.getElementById(id);
+
+    const user = get('userNode');
+    const http = get('httpReq');
+    const urlDisp = get('url_dispatcher');
+    const pItems = get('path_items');
+    const pAdd = get('path_add');
+    const pDel = get('path_delete');
+    const vCreate = get('create_view');
+    const vDelete = get('delete_view');
+    const vList = get('list_view');
+    const form = get('item_form');
+    const model = get('item_model');
+    const db = get('db');
+    const tpl = get('tpl_main');
+
+    if (user && http) line(leftCenterOf(user), topCenterOf(http), '用户操作');
+    if (http && urlDisp) line(bottomCenterOf(http), topCenterOf(urlDisp), 'HTTP请求');
+
+    if (pAdd && vCreate) line(bottomCenterOf(pAdd), topCenterOf(vCreate), 'POST /items/add/');
+    if (pDel && vDelete) line(bottomCenterOf(pDel), topCenterOf(vDelete), 'POST /items/delete/');
+    if (pItems && vList) line(bottomCenterOf(pItems), topCenterOf(vList), 'GET /items/');
+
+    if (vCreate && form) line(bottomCenterOf(vCreate), topCenterOf(form), '使用表单');
+    if (vDelete && model) line(bottomCenterOf(vDelete), topCenterOf(model), '删除实例');
+    if (vCreate && model) line(bottomCenterOf(vCreate), topCenterOf(model), '创建新实例');
+    if (vList && tpl) line(rightCenterOf(vList), leftCenterOf(tpl), '传递上下文 → 渲染模板');
+
+    if (model && db) line(bottomCenterOf(model), topCenterOf(db), 'ORM操作');
+    if (tpl && user) line(rightCenterOf(tpl), leftCenterOf(user), '生成HTML');
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+    renderArchitecture();
+    window.addEventListener('resize', ()=>{
+      renderArchitecture();
+    });
+});
+</script>
+</body>
+</html>

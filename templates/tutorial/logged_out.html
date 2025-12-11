@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ログアウト完了 - Python学習システム{% endblock %}
+
+{% block content %}
+<div class="logout-container">
+    <div class="logout-message">
+        <h2>👋 ログアウトに成功しました。</h2>
+        <p>Python学習システムをご利用いただき、ありがとうございます！</p>
+        <div class="logout-actions">
+            <a href="{% url 'home' %}" class="btn">ホームに戻る</a>
+            <a href="{% url 'login' %}" class="btn btn-secondary">再度ログインする</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

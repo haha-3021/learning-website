@@ -1,0 +1,1065 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}学習データ一覧 - Python記物本学習システム{% endblock %}
+
+{% block extra_css %}
+<style>
+.wrong-answers-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.page-header h1 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    font-size: 2.5rem;
+}
+
+.page-header p {
+    color: #7f8c8d;
+    font-size: 1.1rem;
+}
+
+.stats-summary {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+    text-align: center;
+    border-left: 5px solid #e74c3c;
+}
+
+.stats-number {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #e74c3c;
+    margin-bottom: 0.5rem;
+}
+
+.stats-label {
+    font-size: 1.1rem;
+    color: #7f8c8d;
+    margin-bottom: 1rem;
+}
+
+/* 学習時間統計スタイル */
+.study-time-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    border: 1px solid #e9ecef;
+}
+
+.section-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.section-header h2 {
+    color: #2c3e50;
+    margin: 0;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.time-stats-overview {
+    margin-bottom: 2rem;
+}
+
+.total-time-card {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.time-icon {
+    font-size: 2.5rem;
+    margin-right: 1rem;
+}
+
+.time-info {
+    flex: 1;
+}
+
+.time-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-bottom: 0.5rem;
+}
+
+.time-value {
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.chapter-time-breakdown h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chapter-time-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.3s ease;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+
+.chapter-time-item:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.chapter-time-item:last-child {
+    border-bottom: none;
+}
+
+.chapter-time-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1;
+    margin-right: 1rem;
+}
+
+.chapter-name {
+    font-weight: 500;
+    color: #2c3e50;
+    font-size: 0.95rem;
+}
+
+.chapter-time {
+    color: #6c757d;
+    font-weight: 500;
+    background: #f8f9fa;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.time-progress-bar {
+    width: 120px;
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #45a049);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    position: relative;
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.no-time-data {
+    text-align: center;
+    padding: 3rem;
+    color: #6c757d;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 2px dashed #dee2e6;
+}
+
+.no-time-data p {
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.no-time-data small {
+    font-size: 0.9rem;
+}
+
+/* チャプターセクションスタイル */
+.chapter-section {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.chapter-section:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.chapter-header {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.chapter-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: rotate(45deg);
+    animation: shine 3s infinite;
+}
+
+@keyframes shine {
+    0% { transform: translateX(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) rotate(45deg); }
+}
+
+.chapter-title {
+    font-size: 1.4rem;
+    font-weight: bold;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.chapter-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+.chapter-count {
+    background: rgba(255,255,255,0.2);
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+}
+
+.chapter-study-time {
+    background: rgba(255,255,255,0.2);
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+}
+
+.chapter-accuracy {
+    background: rgba(255,255,255,0.2);
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+}
+
+.wrong-answer-item {
+    padding: 1.5rem;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.3s ease;
+}
+
+.wrong-answer-item:hover {
+    background-color: #f8f9fa;
+}
+
+.wrong-answer-item:last-child {
+    border-bottom: none;
+}
+
+.question-text {
+    font-weight: bold;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    line-height: 1.5;
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+}
+
+.answer-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.answer-box {
+    padding: 1.2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.answer-box:hover {
+    transform: translateY(-2px);
+}
+
+.wrong-answer-box {
+    background: #ffeaea;
+    border: 1px solid #e74c3c;
+    border-left: 4px solid #e74c3c;
+}
+
+.correct-answer-box {
+    background: #eaffea;
+    border: 1px solid #27ae60;
+    border-left: 4px solid #27ae60;
+}
+
+.answer-label {
+    font-weight: bold;
+    margin-bottom: 0.8rem;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.wrong-label {
+    color: #e74c3c;
+}
+
+.correct-label {
+    color: #27ae60;
+}
+
+.answer-content {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    white-space: pre-wrap;
+    background: rgba(255,255,255,0.7);
+    padding: 0.8rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.answer-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+}
+
+.answer-date {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-small {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+}
+
+.btn-info {
+    background: #3498db;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #2980b9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+}
+
+.chapter-actions {
+    padding: 1rem 1.5rem;
+    background: #f8f9fa;
+    text-align: right;
+    border-top: 1px solid #e9ecef;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #7f8c8d;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin: 2rem 0;
+}
+
+.empty-icon {
+    font-size: 5rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.empty-state p {
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* 進捗表示スタイル */
+.progress-section {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.progress-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.progress-title {
+    color: #2c3e50;
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.progress-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+    border-left: 4px solid #3498db;
+}
+
+.stat-number {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+    .wrong-answers-container {
+        padding: 1rem;
+    }
+    
+    .page-header h1 {
+        font-size: 2rem;
+    }
+    
+    .answer-comparison {
+        grid-template-columns: 1fr;
+    }
+    
+    .chapter-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .chapter-meta {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .study-time-section {
+        padding: 1.5rem;
+    }
+    
+    .total-time-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 1rem;
+    }
+    
+    .time-icon {
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+    
+    .chapter-time-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .chapter-time-info {
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+        width: 100%;
+    }
+    
+    .time-progress-bar {
+        width: 100%;
+    }
+    
+    .answer-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-start;
+    }
+    
+    .progress-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-number {
+        font-size: 2.5rem;
+    }
+    
+    .time-value {
+        font-size: 1.5rem;
+    }
+    
+    .chapter-title {
+        font-size: 1.2rem;
+    }
+    
+    .question-text {
+        font-size: 1rem;
+    }
+}
+
+/* アニメーション */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.chapter-section {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.wrong-answer-item {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* スクロールバーのカスタマイズ */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.progress-subsection {
+    margin-top: 1.5rem;
+}
+
+.progress-subtitle {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+.no-completed-text {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    line-height: 1.6;
+}
+
+/* チャプター練習結果テーブル */
+.chapter-results-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+}
+
+.chapter-results-table th,
+.chapter-results-table td {
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid #e9ecef;
+    text-align: center;
+}
+
+.chapter-results-table th {
+    background: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+}
+
+.chapter-results-table tr:hover td {
+    background: #fdfdfd;
+}
+
+.progress-subsection {
+    margin-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 1rem;
+}
+
+.progress-subtitle {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: #2c3e50;
+}
+
+.no-studied-text {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    line-height: 1.6;
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wrong-answers-container">
+    <div class="page-header">
+        <h1>📖 学習データ一覧</h1>
+        <p>ここでは間違えた問題を確認・復習できます。学習時間の統計も確認できます。</p>
+    </div>
+
+    <!-- 学習時間統計セクション - 常に表示 -->
+    <div class="study-time-section">
+        <div class="section-header">
+            <h2>⏱️ 学習時間統計</h2>
+        </div>
+        
+        <div class="time-stats-overview">
+            <div class="total-time-card">
+                <div class="time-icon">📚</div>
+                <div class="time-info">
+                    <div class="time-label">総学習時間</div>
+                    <div class="time-value">{{ total_study_time }}</div>
+                    <small style="opacity: 0.7; font-size: 0.8rem;">
+                        ({{ chapters_with_wrong_answers|length }} チャプター学習済み)
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="chapter-time-breakdown">
+            <h3>📊 チャプター別学習時間</h3>
+            
+            {% if chapters_with_wrong_answers %}
+            <div class="time-breakdown-list">
+                {% for chapter_data in chapters_with_wrong_answers %}
+                {% if chapter_data.study_seconds > 0 %}
+                <div class="chapter-time-item">
+                    <div class="chapter-time-info">
+                        <span class="chapter-name">{{ chapter_data.chapter.title }}</span>
+                        <span class="chapter-time">{{ chapter_data.study_time }}</span>
+                    </div>
+                    <div class="time-progress-bar">
+                        {% if max_study_seconds > 0 %}
+                        {% widthratio chapter_data.study_seconds max_study_seconds 100 as progress_width %}
+                        <div class="progress-fill" style="width: {{ progress_width }}%"></div>
+                        {% else %}
+                        <div class="progress-fill" style="width: 0%"></div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="no-time-data">
+                <p>まだ学習時間の記録がありません</p>
+                <small>チャプターを学習すると、ここに学習時間が表示されます</small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 進捗セクション - 常に表示 -->
+    <div class="progress-section">
+        <div class="progress-header">
+            <h3 class="progress-title">📈 学習進捗</h3>
+        </div>
+
+        <!-- 上部：4つの統計カード -->
+        <div class="progress-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_wrong_answers }}</div>
+                <div class="stat-label">間違い問題数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ completed_chapters_count }}</div>
+                <div class="stat-label">完了チャプター数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ total_study_time }}</div>
+                <div class="stat-label">総学習時間</div>
+            </div>
+            <div class="stat-card">
+                {% if global_accuracy or global_accuracy == 0 %}
+                    <div class="stat-number">{{ global_accuracy }}%</div>
+                {% else %}
+                    <div class="stat-number">-</div>
+                {% endif %}
+                <div class="stat-label">推定正答率</div>
+            </div>
+        </div>
+
+        <!-- 正答率の履歴（学習ログ） - 常に表示 -->
+        <div class="progress-subsection">
+            <h4 class="progress-subtitle">🎯 正答率の履歴（学習ログ）</h4>
+
+            {% if chapter_results %}
+            <table class="chapter-results-table">
+                <thead>
+                    <tr>
+                        <th>記録日</th>
+                        <th>チャプター</th>
+                        <th>正答率</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in chapter_results %}
+                    <tr>
+                        <td>{{ result.created_at|date:"Y-m-d H:i" }}</td>
+                        <td>{{ result.chapter.title }}</td>
+                        <td>{{ result.accuracy|floatformat:1 }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-time-data">
+                <p>まだ学習ログがありません。</p>
+                <small>
+                    チャプターの練習問題を解いて「チャプターを完了」すると、
+                    ここに正答率の履歴が表示されます。
+                </small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if total_wrong_answers > 0 %}
+    <!-- 統計サマリー - 誤答がある場合のみ表示 -->
+    <div class="stats-summary">
+        <div class="stats-number">{{ total_wrong_answers }}</div>
+        <div class="stats-label">累計の間違い問題数</div>
+        <div class="stats-label">学習時間: {{ total_study_time }}</div>
+    </div>
+
+    <!-- チャプター別誤答表示 - 誤答がある場合のみ表示 -->
+    {% for chapter_data in chapters_with_wrong_answers %}
+    {% if chapter_data.count > 0 %}
+    <div class="chapter-section">
+        <div class="chapter-header">
+            <h2 class="chapter-title">{{ chapter_data.chapter.title }}</h2>
+            <div class="chapter-meta">
+                <div class="chapter-count">
+                    {{ chapter_data.count }} 件の間違い
+                </div>
+                <div class="chapter-study-time">
+                    学習時間: {{ chapter_data.study_time }}
+                </div>
+                {% if chapter_data.total_questions %}
+                <div class="chapter-accuracy">
+                    正答率（推定）:
+                    {% if chapter_data.accuracy or chapter_data.accuracy == 0 %}
+                        {{ chapter_data.accuracy }}%
+                    {% else %}
+                        -
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% for wrong_answer in chapter_data.wrong_answers %}
+        <div class="wrong-answer-item">
+            <div class="question-text">
+                {{ wrong_answer.question.question_text|linebreaks }}
+            </div>
+            
+            <div class="answer-comparison">
+                <div class="answer-box wrong-answer-box">
+                    <div class="answer-label wrong-label">
+                        ❌ あなたの解答
+                    </div>
+                    <div class="answer-content">{{ wrong_answer.wrong_answer }}</div>
+                </div>
+                
+                <div class="answer-box correct-answer-box">
+                    <div class="answer-label correct-label">
+                        ✅ 正しい解答
+                    </div>
+                    <div class="answer-content">{{ wrong_answer.correct_answer }}</div>
+                </div>
+            </div>
+            
+            <div class="answer-actions">
+                <small class="answer-date">
+                    {{ wrong_answer.created_at|date:"Y年m月d日 H:i" }} 記録
+                </small>
+                <button class="btn btn-small btn-danger" 
+                        onclick="deleteWrongAnswer({{ wrong_answer.id }})">
+                    🗑️ 記録を削除
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <div class="chapter-actions">
+            <button class="btn btn-danger" 
+                    onclick="clearChapterWrongAnswers({{ chapter_data.chapter.id }})">
+                🗑️ この章の間違いをすべて削除
+            </button>
+            <a href="{% url 'chapter_detail' chapter_data.chapter.id %}" class="btn btn-info">
+                📖 この章を再学習する
+            </a>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    
+    {% else %}
+    <!-- 空状態 - 誤答がない場合のみ表示 -->
+    <div class="empty-state">
+        <div class="empty-icon">📚</div>
+        <h3>まだ間違いの記録はありません</h3>
+        <p>学習を続けると、ここに間違えた問題が記録されます。復習して知識を定着させましょう。</p>
+        <a href="{% url 'home' %}" class="btn btn-info">
+            🚀 学習を始める
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const STUDY_LOG_KEY = 'study_logs_v1';
+
+// 誤答記録を削除
+function deleteWrongAnswer(wrongAnswerId) {
+    if (confirm('この誤答記録を削除してもよろしいですか？')) {
+        fetch(`/wrong-answer/${wrongAnswerId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('誤答記録を削除しました', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                showMessage('削除に失敗しました', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('削除中にエラーが発生しました', 'error');
+        });
+    }
+}
+
+// チャプターのすべての誤答記録を削除
+function clearChapterWrongAnswers(chapterId) {
+    if (confirm('この章のすべての誤答記録を削除してもよろしいですか？この操作は元に戻せません。')) {
+        fetch(`/wrong-answers/chapter/${chapterId}/clear/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage(data.message, 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showMessage(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('削除中にエラーが発生しました', 'error');
+        });
+    }
+}
+
+// メッセージ表示関数
+function showMessage(message, type) {
+    // 既存のメッセージを削除
+    const existingMessages = document.querySelectorAll('.custom-message');
+    existingMessages.forEach(msg => msg.remove());
+    
+    // メッセージ要素を作成
+    const messageEl = document.createElement('div');
+    messageEl.textContent = message;
+    messageEl.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 1000;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        max-width: 300px;
+        word-wrap: break-word;
+    `;
+    
+    if (type === 'success') {
+        messageEl.style.background = 'linear-gradient(135deg, #27ae60, #2ecc71)';
+    } else if (type === 'error') {
+        messageEl.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
+    } else if (type === 'info') {
+        messageEl.style.background = 'linear-gradient(135deg, #3498db, #2980b9)';
+    }
+    
+    messageEl.classList.add('custom-message');
+    document.body.appendChild(messageEl);
+    
+    // 3秒後に自動的に削除
+    setTimeout(() => {
+        messageEl.style.opacity = '0';
+        messageEl.style.transform = 'translateX(100px)';
+        setTimeout(() => {
+            if (messageEl.parentNode) {
+                messageEl.parentNode.removeChild(messageEl);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// CSRFトークン取得関数
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// ページ読み込み時のアニメーション + 学習ログ表示
+document.addEventListener('DOMContentLoaded', function() {
+    // チャプターセクションに遅延アニメーションを追加
+    const chapterSections = document.querySelectorAll('.chapter-section');
+    chapterSections.forEach((section, index) => {
+        section.style.animationDelay = `${index * 0.1}s`;
+    });
+    
+    // 誤答アイテムに遅延アニメーションを追加
+    const wrongAnswerItems = document.querySelectorAll('.wrong-answer-item');
+    wrongAnswerItems.forEach((item, index) => {
+        item.style.animationDelay = `${index * 0.05}s`;
+    });
+
+});
+</script>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ホーム - Python学習システム{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/home.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="welcome-section">
+    <h2>ようこそ！Python記録帳学習システムへ！</h2>
+    <p>このサイトでは、穴埋め問題や選択問題を解きながら、
+        PythonとDjangoを使って「資産・物品管理システム」を作る方法を学ぶことができます。</p>
+    
+    
+    {% if not user.is_authenticated %}
+    <div class="guest-message">
+        <p><strong>学習を始めるには、まずログインまたは新規登録してください。</strong></p>
+    </div>
+    {% endif %}
+    
+    <div class="learning-objectives">
+    <br>
+        <h3>🎯学習目標</h3>
+        <ul>
+            <li>Djangoフレームワークの基本的な使い方を身につける</li>
+            <li>データベースモデルの設計を理解する</li>
+            <li>Web開発の基礎を学ぶ</li>
+            <li>簡単なWebアプリを自分で作れるようになる</li>
+        </ul>
+    </div>
+</div>
+
+<div class="chapter-list">
+    <h2>📚 学習コンテンツ</h2>
+    
+    {% for item in chapters_with_progress %}
+    <div class="chapter-card">
+        {% if item.chapter.image %}
+        <div class="chapter-image">
+            <img src="{{ item.chapter.image.url }}" alt="{{ item.chapter.title }}" style="max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 1rem;">
+        </div>
+        {% endif %}
+        
+        <h3>第{{ item.chapter.order }}章: {{ item.chapter.title }}</h3>
+        <p>{{ item.chapter.description }}</p>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" data-progress="{{ item.progress_width }}"></div>
+        </div>
+        
+        {% if user.is_authenticated %}
+            <a href="{% url 'chapter_detail' item.chapter.id %}" class="btn">
+                {% if item.progress_width == 100 %}
+                    復習する
+                {% elif item.progress_width == 50 %}
+                    学習を続ける
+                {% else %}
+                    学習を始める
+                {% endif %}
+            </a>
+        {% else %}
+            <p><a href="{% url 'login' %}" class="btn">ログインして学習を始める</a></p>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div class="chapter-card">
+        <h3>現在、利用できる学習コンテンツはありません。</h3>
+        <p>管理者に連絡して学習章を追加してください。</p>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="system-requirements">
+    <h3>💻 システム要件</h3>
+    <div>
+        <p><strong>Pythonバージョン:</strong> 3.6 以上</p>
+        <p><strong>Djangoバージョン:</strong> 3.2 以上</p>
+        <p><strong>データベース:</strong> SQLite (デフォルト)</p>
+        <p><strong>ブラウザ:</strong> Chrome、Firefox、Safari、または Edge</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 初始化进度条
+document.addEventListener('DOMContentLoaded', function() {
+    const progressFills = document.querySelectorAll('.progress-fill');
+    progressFills.forEach(fill => {
+        const progress = fill.getAttribute('data-progress');
+        if (progress !== null) {
+            fill.style.width = progress + '%';
+        }
+    });
+});
+</script>
+{% endblock %}

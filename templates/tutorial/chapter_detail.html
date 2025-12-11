@@ -1,0 +1,2002 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ chapter.title }} - Python記物本学習システム{% endblock %}
+
+{% block extra_css %}
+<style>
+.chapter-detail-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* ヘッダーセクション */
+.chapter-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.chapter-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+    transform: rotate(45deg);
+    animation: shine 6s infinite;
+}
+
+@keyframes shine {
+    0% { transform: translateX(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) rotate(45deg); }
+}
+
+.chapter-title-section {
+    position: relative;
+    z-index: 2;
+}
+
+.chapter-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.chapter-description {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.chapter-meta {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    backdrop-filter: blur(10px);
+}
+
+/* 進捗セクション */
+.progress-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+    border-left: 5px solid #4CAF50;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.progress-title {
+    font-size: 1.3rem;
+    color: #2c3e50;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.progress-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-number {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.progress-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* 学習ガイドセクション */
+.study-guide-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    color: #2c3e50;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.guide-content {
+    line-height: 1.8;
+    font-size: 1.1rem;
+    color: #4a5568;
+}
+
+.guide-content h1, .guide-content h2, .guide-content h3 {
+    color: #2c3e50;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.guide-content p {
+    margin-bottom: 1rem;
+}
+
+.guide-content code {
+    background: #f7fafc;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.9rem;
+    color: #e53e3e;
+}
+
+.guide-content pre {
+    background: #2d3748;
+    color: #e2e8f0;
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+}
+
+.guide-content pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+}
+
+/* 問題セクション */
+.questions-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.question-item {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #3498db;
+    transition: all 0.3s ease;
+}
+
+.question-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+
+.question-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.question-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2c3e50;
+    line-height: 1.6;
+    flex: 1;
+}
+
+.question-meta {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.question-type {
+    background: #3498db;
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.question-difficulty {
+    background: #e74c3c;
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.question-difficulty.easy {
+    background: #27ae60;
+}
+
+.question-difficulty.medium {
+    background: #f39c12;
+}
+
+.code-snippet {
+    background: #2d3748;
+    color: #e2e8f0;
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+    overflow-x: auto;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.9rem;
+}
+
+/* 選択肢 */
+.choices-container {
+    margin: 1.5rem 0;
+}
+
+.choice-item {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.choice-item:hover {
+    border-color: #3498db;
+    background: #f8f9ff;
+}
+
+.choice-item.selected {
+    border-color: #3498db;
+    background: #e3f2fd;
+}
+
+.choice-radio {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #bdc3c7;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.choice-item.selected .choice-radio {
+    border-color: #3498db;
+    background: #3498db;
+}
+
+.choice-item.selected .choice-radio::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+}
+
+.choice-text {
+    flex: 1;
+    font-size: 1rem;
+    color: #2c3e50;
+}
+
+/* 空欄問題スタイル（単一＆複数共通） */
+.fill-blank-container {
+    margin: 1.5rem 0;
+}
+
+/* 所有填空输入框统一风格（大气一点的胶囊输入框） */
+.blank-input {
+    display: inline-flex;
+    align-items: center;
+    width: 260px;
+    max-width: 100%;
+    margin: 0.25rem 0;
+    padding: 0.75rem 1rem;
+    border-radius: 999px;
+    border: 2px solid #d0d7e2;
+    background: #f8fafc;
+    font-size: 1rem;
+    color: #2c3e50;
+    text-align: left;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, transform 0.1s ease;
+}
+
+.blank-input:focus {
+    outline: none;
+    border-color: #3498db;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(52, 152, 219, 0.25);
+    transform: translateY(-1px);
+}
+
+.blank-input::placeholder {
+    color: #a0aec0;
+    font-size: 0.9rem;
+}
+
+.blank-hint {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    margin-top: 0.5rem;
+}
+
+/* 多填空题样式（布局为竖向、左label右输入、卡片风） */
+.question-multi-fill .question-text {
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.multi-blanks-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.blank-input-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+}
+
+.blank-input-group label {
+    min-width: 90px;
+    font-weight: 600;
+    color: #4a5568;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.blank-input-group .blank-input {
+    flex: 1;
+    margin: 0;
+}
+
+/* ヒントボタンスタイル */
+.hint-button {
+    background: linear-gradient(135deg, #FFD93D, #FF9A3D);
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.hint-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 157, 61, 0.3);
+}
+
+.hint-button:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ヒントモーダルスタイル */
+.hint-modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.hint-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.hint-modal-title {
+    margin: 0;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.hint-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #7f8c8d;
+    padding: 0.5rem;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease;
+}
+
+.hint-modal-close:hover {
+    background: #f8f9fa;
+}
+
+.hint-modal-body {
+    line-height: 1.6;
+    color: #2c3e50;
+    font-size: 1.1rem;
+}
+
+.hint-modal-footer {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+/* 回答アクション */
+.answer-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #27ae60, #229954);
+    color: white;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(39, 174, 96, 0.3);
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+    transform: translateY(-2px);
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid #3498db;
+    color: #3498db;
+}
+
+.btn-outline:hover {
+    background: #3498db;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* 解説セクション */
+.explanation-section {
+    background: #e8f5e8;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    border-left: 4px solid #27ae60;
+    display: none;
+}
+
+.explanation-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    color: #27ae60;
+    font-weight: 600;
+}
+
+.explanation-content {
+    line-height: 1.6;
+    color: #2c3e50;
+}
+
+/* 完了セクション */
+.completion-section {
+    background: linear-gradient(135deg, #27ae60, #229954);
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    text-align: center;
+    margin-top: 2rem;
+    display: none;
+}
+
+.completion-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.completion-message {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+/* 学習時間表示 */
+.study-time-display {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(52, 152, 219, 0.9);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+    display: none;
+}
+
+.study-time-text {
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+}
+
+.study-time-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+    .chapter-detail-container {
+        padding: 1rem;
+    }
+    
+    .chapter-header {
+        padding: 1.5rem;
+    }
+    
+    .chapter-title {
+        font-size: 2rem;
+    }
+    
+    .chapter-meta {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .progress-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .progress-actions {
+        flex-direction: column;
+    }
+    
+    .question-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .question-meta {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .answer-actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .study-time-display {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .chapter-title {
+        font-size: 1.8rem;
+    }
+    
+    .section-title {
+        font-size: 1.3rem;
+    }
+    
+    .study-guide-section,
+    .questions-section {
+        padding: 1.5rem;
+    }
+    
+    .question-item {
+        padding: 1rem;
+    }
+}
+
+/* アニメーション */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.chapter-header,
+.progress-section,
+.study-guide-section,
+.questions-section {
+    animation: fadeIn 0.6s ease-out;
+}
+
+.question-item {
+    animation: fadeIn 0.4s ease-out;
+}
+
+/* スクロールバーのカスタマイズ */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* 本地反馈样式（统一成卡片风） */
+.local-feedback {
+    margin: 16px 0;
+    min-height: 40px;
+    transition: all 0.2s ease;
+}
+
+.alert {
+    position: relative;
+    padding: 12px 16px 12px 18px;
+    border-radius: 10px;
+    margin: 8px 0;
+    border-left: 4px solid #3498db;
+    background: #f8fbff;
+    font-size: 0.9rem;
+    color: #2c3e50;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    animation: slideIn 0.25s ease-out;
+}
+
+/* 正解メッセージ */
+.alert-success {
+    border-left-color: #27ae60;
+    background: #e8f5e9;
+}
+
+/* エラーメッセージ */
+.alert-error {
+    border-left-color: #e74c3c;
+    background: #fdecea;
+}
+
+/* 情報メッセージ */
+.alert-info {
+    border-left-color: #3498db;
+    background: #e8f3ff;
+}
+
+/* 正解・错误解释的小动画 */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ★共通の非表示クラス（ガイド→問題切り替え用） */
+.hidden {
+    display: none !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chapter-detail-container">
+    <!-- チャプターヘッダー -->
+    <div class="chapter-header">
+        <div class="chapter-title-section">
+            <h1 class="chapter-title">{{ chapter.title }}</h1>
+            <p class="chapter-description">{{ chapter.description }}</p>
+            <div class="chapter-meta">
+                <div class="meta-item">
+                    <span>📚</span>
+                    <span>第 {{ chapter.order }} 章</span>
+                </div>
+                <div class="meta-item">
+                    <span>❓</span>
+                    <span>{{ chapter.get_question_count }} 問</span>
+                </div>
+                <div class="meta-item">
+                    <span>⏱️</span>
+                    <span id="currentStudyTime">学習時間: 計測中...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 進捗セクション -->
+    <div class="progress-section">
+        <div class="progress-header">
+            <h2 class="progress-title">📊 学習進捗</h2>
+            <div class="progress-status">
+                {% if user_progress.completed %}
+                <span style="color: #27ae60; font-weight: 600;">✅ 完了</span>
+                {% elif user_progress.studied_guide %}
+                <span style="color: #f39c12; font-weight: 600;">📖 学習中</span>
+                {% else %}
+                <span style="color: #e74c3c; font-weight: 600;">🔒 未開始</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="progress-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ chapter.get_question_count }}</div>
+                <div class="stat-label">問題数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">
+                    {% if user_progress.score %}{{ user_progress.score }}{% else %}0{% endif %}%
+                </div>
+                <div class="stat-label">スコア</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">
+                    {% if user_progress.completed %}✅{% else %}⏳{% endif %}
+                </div>
+                <div class="stat-label">ステータス</div>
+            </div>
+        </div>
+        
+        <div class="progress-actions">
+            {% if not user_progress.studied_guide and study_guide %}
+            <button class="btn btn-primary" onclick="markGuideStudied()">
+                📖 学習ガイドを読了
+            </button>
+            {% endif %}
+            
+            {% if not user_progress.completed %}
+            <button class="btn btn-success" onclick="completeChapter()" 
+                    {% if not user_progress.studied_guide %}disabled{% endif %}>
+                🎯 チャプターを完了
+            </button>
+            {% endif %}
+
+            <button class="btn btn-secondary" onclick="exitChapter()">
+                🚪 チャプターを中断して退出
+            </button>
+            
+            <button class="btn btn-outline" onclick="resetProgress()">
+                🔄 進捗をリセット
+            </button>
+        </div>
+    </div>
+
+    <!-- 学習ガイドセクション -->
+    {% if study_guide %}
+    <div class="study-guide-section" id="studyGuideSection">
+        <div class="section-header">
+            <h2 class="section-title">📘 学習ガイド</h2>
+            {% if user_progress.studied_guide %}
+            <span style="color: #27ae60; font-weight: 600;">✅ 読了済み</span>
+            {% endif %}
+        </div>
+        <div class="guide-content">
+            {{ study_guide.content|safe }}
+        </div>
+
+        {# 添付ファイル #}
+        {% if study_guide.attachments.all %}
+            {% if study_guide.attachments.all|length > 0 %}
+            <div class="study-guide-attachments" style="margin-top: 1.5rem;">
+                <h3>📎 このチャプターの添付ファイル</h3>
+                <ul>
+                    {% for att in study_guide.attachments.all %}
+                        <li>
+                            <a href="{{ att.file.url }}" download>
+                                {{ att.display_name|default:"添付ファイル" }}
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        {% endif %}
+
+        {% if not user_progress.studied_guide %}
+        <div class="answer-actions">
+            <button class="btn btn-primary" onclick="markGuideStudied()">
+                ✅ 学習ガイドを読了としてマーク
+            </button>
+            <button class="btn btn-success" onclick="goToQuestions()">
+                🎯 練習問題に進む
+            </button>
+        </div>
+        {% else %}
+        <div class="answer-actions">
+            <button class="btn btn-success" onclick="goToQuestions()">
+                🎯 練習問題に進む
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- 問題セクション -->
+    <div class="questions-section hidden" id="questionsSection">
+        <div class="section-header">
+            <h2 class="section-title">❓ 練習問題</h2>
+            <span class="questions-count">{{ questions|length }} 問</span>
+        </div>
+        
+        {% for question in questions %}
+        <div class="question-item {% if question.question_type == 'multi_fill' %}question-multi-fill{% endif %}"
+            id="question-{{ question.id }}"
+            data-question-type="{{ question.question_type }}"
+            data-user-answer="{{ question.user_answer|default_if_none:'' }}"
+            data-user-correct="{% if question.user_is_correct %}1{% else %}0{% endif %}">
+            <div class="question-header">
+                <div class="question-text">{{ question.question_text|safe }}</div>
+                <div class="question-meta">
+                    <span class="question-type">
+                        {% if question.question_type == 'choice' %}選択問題
+                        {% elif question.question_type == 'fill' %}穴埋め問題（単一空）
+                        {% elif question.question_type == 'multi_fill' %}穴埋め問題（複数空）
+                        {% endif %}
+                    </span>
+                    <span class="question-difficulty {{ question.difficulty|lower }}">
+                        {% if question.difficulty == 'easy' %}易しい
+                        {% elif question.difficulty == 'medium' %}普通
+                        {% elif question.difficulty == 'hard' %}難しい
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            {% if question.code_snippet %}
+            <pre class="code-snippet"><code>{{ question.code_snippet|escape }}</code></pre>
+            {% endif %}
+
+            {% if question.question_type == 'choice' %}
+            <!-- 選択式問題 -->
+            <div class="choices-container">
+                {% for choice in question.choice_set.all %}
+                <div class="choice-item" onclick="selectChoice(this, '{{ choice.id }}')" data-choice-id="{{ choice.id }}">
+                    <div class="choice-radio"></div>
+                    <div class="choice-text">{{ choice.choice_text }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% elif question.question_type == 'fill' %}
+            <!-- 単一空欄問題 -->
+            <div class="fill-blank-container">
+                <input type="text" 
+                       id="answer-{{ question.id }}" 
+                       class="blank-input" 
+                       placeholder="回答を入力してください">
+                <div class="blank-hint">Enterキーで回答を送信できます</div>
+            </div>
+
+            {% elif question.question_type == 'multi_fill' %}
+            <!-- 複数空欄問題 -->
+            <div class="multi-blank-container multi-blanks-container">
+                {% for blank_num in question.get_blank_range %}
+                <div class="blank-input-group">
+                    <label for="blank-{{ question.id }}-{{ forloop.counter0 }}">空欄 {{ forloop.counter }}:</label>
+                    <input type="text" 
+                        id="blank-{{ question.id }}-{{ forloop.counter0 }}" 
+                        class="blank-input multi-blank"
+                        placeholder="回答を入力">
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- フィードバック表示エリア -->
+            <div class="local-feedback" id="feedback-{{ question.id }}"></div>
+
+            <!-- アクションボタン -->
+            <div class="answer-actions">
+                <button type="button" class="btn btn-outline hint-button" onclick="showHint({{ question.id }})">
+                    💡 ヒントを見る
+                </button>
+                <button type="button" class="btn btn-primary" onclick="submitAnswer({{ question.id }})">
+                    回答を送信
+                </button>
+            </div>
+
+            <!-- 解説セクション -->
+            <div class="explanation-section" id="explanation-{{ question.id }}">
+                <div class="explanation-header">
+                    <span>💡 解説</span>
+                </div>
+                <div class="explanation-content">
+                    回答後に解説が表示されます
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div style="text-align: center; padding: 3rem; color: #7f8c8d;">
+            <p>このチャプターには問題がありません。</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 完了セクション -->
+    {% if user_progress.completed %}
+    <div class="completion-section" id="completionSection">
+        <div class="completion-icon">🎉</div>
+        <div class="completion-message">おめでとうございます！</div>
+        <p>第{{ chapter.order }}章「{{ chapter.title }}」を完了しました！</p>
+        <div class="answer-actions" style="justify-content: center;">
+            <a href="{% url 'home' %}" class="btn btn-outline" style="background: rgba(255,255,255,0.2); color: white;">
+                🏠 ホームに戻る
+            </a>
+            <a href="{% url 'wrong_answers_book' %}" class="btn btn-outline" style="background: rgba(255,255,255,0.2); color: white;">
+                📖 間違いノートを見る
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 学習時間表示 -->
+<div class="study-time-display" id="studyTimeDisplay">
+    <div class="study-time-text">現在の学習時間</div>
+    <div class="study-time-value" id="studyTimeValue">00:00</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// グローバル変数
+let studySessionId = null;
+let studyStartTime = null;
+let studyTimer = null;
+let currentStudySeconds = 0;
+let autoSaveInterval = null;
+let isPageUnloading = false;
+
+// ★ 学習ガイドを「最後まで読んだかどうか」のフラグ
+let hasReadStudyGuide = false;
+
+// ページ読み込み時の初期化
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('チャプター詳細ページを読み込みました');
+
+    // 学習時間記録を開始
+    startStudyTime();
+    
+    // 学習時間表示を初期化
+    initializeStudyTimeDisplay();
+    
+    // Enterキーで回答を送信
+    setupEnterKeySubmit();
+
+    // 途中保存された回答を画面に反映
+    initializeSavedAnswers();
+    
+    // ページ可視性変化の監視を登録
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // 学習ガイド読了判定の初期化
+    initStudyGuideReadTracking();
+    
+    // 完了セクションを表示（もし完了済みの場合）
+    {% if user_progress.completed %}
+    setTimeout(() => {
+        document.getElementById('completionSection').style.display = 'block';
+    }, 1000);
+    {% endif %}
+});
+
+// ★ チャプターを中断して退出
+function exitChapter() {
+    // 学習時間を終了してからホームへ戻る
+    endStudyTime().finally(() => {
+        window.location.href = "{% url 'home' %}";
+    });
+}
+
+// ★ 学習ガイドスクロール状況の監視
+function initStudyGuideReadTracking() {
+    const guideSection = document.getElementById('studyGuideSection');
+    if (!guideSection) return;
+
+    // 中身が少なくてスクロールしない場合は、最初から「読了扱い」
+    if (guideSection.scrollHeight <= guideSection.clientHeight + 10) {
+        hasReadStudyGuide = true;
+        return;
+    }
+
+    const onScroll = () => {
+        const threshold = 20; // 少し余裕をもたせる
+        if (guideSection.scrollTop + guideSection.clientHeight >= guideSection.scrollHeight - threshold) {
+            hasReadStudyGuide = true;
+            // 一度 true になったら監視を外してもOK
+            guideSection.removeEventListener('scroll', onScroll);
+            console.log('学習ガイドを最後までスクロールしました');
+        }
+    };
+
+    guideSection.addEventListener('scroll', onScroll);
+}
+
+// ★ 学習ガイドから練習問題ビューへ切り替える
+function goToQuestions() {
+    // 学習ガイドセクションを非表示
+    const guideSection = document.getElementById('studyGuideSection');
+    if (guideSection) {
+        guideSection.classList.add('hidden');
+    }
+
+    // 練習問題セクションを表示
+    const questionsSection = document.getElementById('questionsSection');
+    if (questionsSection) {
+        questionsSection.classList.remove('hidden');
+    }
+
+    // ページ上部へスクロール
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+
+// ページ可視性変化の処理
+function handleVisibilityChange() {
+    if (document.hidden) {
+        if (studyTimer) {
+            clearInterval(studyTimer);
+            studyTimer = null;
+            console.log('ページ非表示、タイマー停止と学習セッション終了');
+            endStudyTime();
+        }
+    } else {
+        if (!studyTimer) {
+            console.log('ページ表示、学習時間記録を再開');
+            startStudyTime();
+        }
+    }
+}
+
+// 自動保存学習時間
+function autoSaveStudyTime() {
+    if (studySessionId && currentStudySeconds > 0 && !isPageUnloading && !document.hidden) {
+        const chapterId = {{ chapter.id }};
+        const finalSeconds = Math.max(currentStudySeconds, 1);
+        
+        console.log('自動保存学習時間:', { sessionId: studySessionId, seconds: finalSeconds });
+        
+        fetch(`/chapter/${chapterId}/update-study-time/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                study_session_id: studySessionId,
+                frontend_seconds: finalSeconds,
+                is_auto_save: true
+            }),
+            keepalive: true
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('自動保存失敗');
+            }
+            console.log('自動保存成功');
+        })
+        .catch(error => {
+            console.error('自動保存エラー:', error);
+        });
+    }
+}
+
+// 定期的な自動保存を開始
+function startAutoSave() {
+    if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
+    }
+    
+    autoSaveInterval = setInterval(() => {
+        if (studySessionId && currentStudySeconds > 0 && !isPageUnloading && !document.hidden) {
+            autoSaveStudyTime();
+        }
+    }, 30000); // 30秒
+}
+
+// 学習時間記録を開始
+function startStudyTime() {
+    if (studySessionId) {
+        endStudyTime().then(() => {
+            createNewStudySession();
+        });
+    } else {
+        createNewStudySession();
+    }
+}
+
+// 新しい学習セッションを作成
+function createNewStudySession() {
+    const currentSessionId = {% if current_session_id %}{{ current_session_id }}{% else %}null{% endif %};
+    
+    console.log('現在のセッションID:', currentSessionId);
+    
+    if (currentSessionId) {
+        studySessionId = currentSessionId;
+        console.log('バックエンドで作成されたセッションを使用:', studySessionId);
+        startStudyTimeDisplay();
+        startAutoSave();
+        return;
+    }
+    
+    console.log('警告：セッションIDが見つかりません、新規セッションを作成');
+    const chapterId = {{ chapter.id }};
+    
+    fetch(`/chapter/${chapterId}/start-study/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            studySessionId = data.study_session_id;
+            studyStartTime = new Date();
+            currentStudySeconds = 0;
+            console.log('学習時間記録開始成功:', studySessionId);
+            startStudyTimeDisplay();
+            startAutoSave();
+        } else {
+            console.error('学習時間記録開始失敗:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('学習時間記録開始エラー:', error);
+    });
+}
+
+// 学習時間表示を初期化
+function initializeStudyTimeDisplay() {
+    const studyTimeDisplay = document.getElementById('studyTimeDisplay');
+    if (studyTimeDisplay) {
+        studyTimeDisplay.style.display = 'block';
+    }
+}
+
+// 学習時間表示を開始
+function startStudyTimeDisplay() {
+    if (!studyTimer) {
+        studyTimer = setInterval(() => {
+            currentStudySeconds++;
+            updateStudyTimeDisplay();
+        }, 1000);
+        console.log('学習時間タイマー開始');
+    }
+}
+
+// 学習時間表示を更新
+function updateStudyTimeDisplay() {
+    const minutes = Math.floor(currentStudySeconds / 60);
+    const seconds = currentStudySeconds % 60;
+    const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    const studyTimeValue = document.getElementById('studyTimeValue');
+    const currentStudyTime = document.getElementById('currentStudyTime');
+    
+    if (studyTimeValue) {
+        studyTimeValue.textContent = timeString;
+    }
+    if (currentStudyTime) {
+        currentStudyTime.textContent = `学習時間: ${timeString}`;
+    }
+}
+
+// 学習時間記録を終了
+function endStudyTime() {
+    if (!studySessionId) {
+        console.log('アクティブな学習セッションはありません');
+        return Promise.resolve();
+    }
+    
+    const chapterId = {{ chapter.id }};
+    const finalSeconds = Math.max(currentStudySeconds, 1);
+    
+    console.log('学習時間記録を終了:', {
+        sessionId: studySessionId,
+        frontendSeconds: finalSeconds,
+        chapterId: chapterId
+    });
+    
+    return fetch(`/chapter/${chapterId}/end-study/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            study_session_id: studySessionId,
+            frontend_seconds: finalSeconds
+        }),
+        keepalive: true
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('学習時間終了リクエスト失敗');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('学習時間終了成功:', data);
+        
+        if (studyTimer) {
+            clearInterval(studyTimer);
+            studyTimer = null;
+        }
+        if (autoSaveInterval) {
+            clearInterval(autoSaveInterval);
+            autoSaveInterval = null;
+        }
+        studySessionId = null;
+        currentStudySeconds = 0;
+        
+        return data;
+    })
+    .catch(error => {
+        console.error('学習時間終了エラー:', error);
+        if (studyTimer) {
+            clearInterval(studyTimer);
+            studyTimer = null;
+        }
+        if (autoSaveInterval) {
+            clearInterval(autoSaveInterval);
+            autoSaveInterval = null;
+        }
+        studySessionId = null;
+        currentStudySeconds = 0;
+    });
+}
+
+// ページ離脱時の処理
+window.addEventListener('beforeunload', function(e) {
+    if (studySessionId && currentStudySeconds > 0) {
+        isPageUnloading = true;
+        console.log('ページ閉鎖、学習時間を終了');
+        
+        const chapterId = {{ chapter.id }};
+        const finalSeconds = Math.max(currentStudySeconds, 1);
+        
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `/chapter/${chapterId}/end-study/`, false);
+        xhr.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(JSON.stringify({
+            study_session_id: studySessionId,
+            frontend_seconds: finalSeconds
+        }));
+        
+        console.log('同期学習時間終了リクエスト完了');
+    }
+});
+
+// タイマーをクリーンアップ
+window.addEventListener('unload', function() {
+    if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
+    }
+    if (studyTimer) {
+        clearInterval(studyTimer);
+    }
+});
+
+// 選択問題の選択処理
+function selectChoice(choiceElement, choiceId) {
+    const questionItem = choiceElement.closest('.question-item');
+    const allChoices = questionItem.querySelectorAll('.choice-item');
+    allChoices.forEach(choice => {
+        choice.classList.remove('selected');
+    });
+    
+    choiceElement.classList.add('selected');
+    choiceElement.dataset.selectedChoice = choiceId;
+}
+
+// 回答を送信
+function submitAnswer(questionId) {
+    const questionElement = document.getElementById(`question-${questionId}`);
+    const feedbackElement = document.getElementById(`feedback-${questionId}`);
+    const explanationElement = document.getElementById(`explanation-${questionId}`);
+
+    feedbackElement.innerHTML = '';
+    
+    const questionType = questionElement.dataset.questionType;
+    
+    let userAnswer = '';
+    
+    if (questionType === 'choice') {
+        const selectedChoice = questionElement.querySelector('.choice-item.selected');
+        if (!selectedChoice) {
+            showLocalMessage(feedbackElement, '回答を選択してください', 'error');
+            return;
+        }
+        userAnswer = selectedChoice.dataset.choiceId;
+    } else if (questionType === 'fill') {
+        userAnswer = document.getElementById(`answer-${questionId}`).value.trim();
+        if (!userAnswer) {
+            showLocalMessage(feedbackElement, '回答を入力してください', 'error');
+            return;
+        }
+    } else if (questionType === 'multi_fill') {
+        const blankInputs = questionElement.querySelectorAll('input[class*="blank-input"]');
+        const answers = [];
+        blankInputs.forEach(input => {
+            answers.push(input.value.trim());
+        });
+        userAnswer = answers.join(',');
+        
+        const allFilled = Array.from(blankInputs).every(input => input.value.trim() !== '');
+        if (!allFilled) {
+            showLocalMessage(feedbackElement, 'すべての空欄に入力してください', 'error');
+            return;
+        }
+    }
+    
+    showLocalMessage(feedbackElement, '回答を送信中...', 'info');
+    
+    fetch(`/question/${questionId}/submit/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `answer=${encodeURIComponent(userAnswer)}`
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('回答送信結果:', data);
+        
+        if (data.success) {
+            showAnswerResult(questionId, data, feedbackElement, explanationElement);
+        } else {
+            showLocalMessage(feedbackElement, data.message || '回答の送信に失敗しました', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showLocalMessage(feedbackElement, '回答の送信中にエラーが発生しました', 'error');
+    });
+}
+
+function recordChapterResult(correctCount, totalQuestions) {
+    const chapterId = {{ chapter.id }};
+
+    fetch(`/chapters/${chapterId}/record_result/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: `correct=${encodeURIComponent(correctCount)}&total=${encodeURIComponent(totalQuestions)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('チャプター結果記録APIレスポンス:', data);
+        if (!data.success) {
+            console.warn('結果記録に失敗:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('結果記録の通信エラー:', error);
+    });
+}
+
+
+// 回答結果を表示
+function showAnswerResult(questionId, data, feedbackElement, explanationElement) {
+    console.log('回答結果を表示:', data);
+    
+    feedbackElement.innerHTML = '';
+    
+    if (data.is_correct) {
+        showLocalMessage(feedbackElement, '✅ 正解です！', 'success');
+        highlightCorrectAnswer(questionId);
+    } else {
+        let errorMessage = '❌ 不正解です';
+        if (data.correct_answer) {
+            errorMessage += `<br><strong>正解:</strong> ${data.correct_answer}`;
+        }
+        if (data.message) {
+            errorMessage += `<br>${data.message}`;
+        }
+        showLocalMessage(feedbackElement, errorMessage, 'error');
+        highlightCorrectAnswer(questionId);
+    }
+    
+    if (data.explanation) {
+        showExplanation(explanationElement, data.explanation);
+    }
+    
+    disableQuestionActions(questionId);
+}
+
+// 正解をハイライト表示（必要なら今后再具体实现）
+function highlightCorrectAnswer(questionId) {
+    // TODO: バックエンドから正解情報を受け取ってハイライトする実装
+}
+
+// 解説を表示
+function showExplanation(explanationElement, explanation) {
+    const explanationContent = explanationElement.querySelector('.explanation-content');
+    if (explanationContent) {
+        explanationContent.innerHTML = explanation;
+        explanationElement.style.display = 'block';
+        
+        setTimeout(() => {
+            explanationElement.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'nearest' 
+            });
+        }, 500);
+    }
+}
+
+// ローカルフィードバックエリアにメッセージを表示
+function showLocalMessage(element, message, type) {
+    element.innerHTML = '';
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `alert alert-${type}`;
+    messageDiv.innerHTML = message;
+    
+    element.appendChild(messageDiv);
+}
+
+// 問題のアクションボタンを無効化
+function disableQuestionActions(questionId) {
+    const questionElement = document.getElementById(`question-${questionId}`);
+    const submitButton = questionElement.querySelector('.btn-primary');
+    const hintButton = questionElement.querySelector('.hint-button');
+    
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = '回答済み';
+        submitButton.style.opacity = '0.6';
+    }
+    
+    if (hintButton) {
+        hintButton.disabled = true;
+        hintButton.style.opacity = '0.6';
+    }
+}
+
+// ヒントを表示
+function showHint(questionId) {
+    console.log('ヒント取得開始:', questionId);
+    
+    const feedbackElement = document.getElementById(`feedback-${questionId}`);
+    showLocalMessage(feedbackElement, 'ヒントを取得中...', 'info');
+    
+    fetch(`/question/${questionId}/hint/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('ヒント取得結果:', data);
+        
+        if (data.success) {
+            feedbackElement.innerHTML = '';
+            showHintModal(data.hint, questionId);
+        } else {
+            showLocalMessage(feedbackElement, data.message || 'ヒントの取得に失敗しました', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('ヒント取得エラー:', error);
+        showLocalMessage(feedbackElement, 'ヒントの取得中にエラーが発生しました', 'error');
+    });
+}
+
+// ヒント表示用モーダル
+function showHintModal(hintText, questionId) {
+    const existingModal = document.getElementById('hintModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'hintModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: relative;
+        ">
+            <div style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1.5rem;
+                padding-bottom: 1rem;
+                border-bottom: 2px solid #f0f0f0;
+            ">
+                <h3 style="
+                    margin: 0;
+                    color: #2c3e50;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                ">
+                    💡 ヒント
+                </h3>
+                <button onclick="closeHintModal()" style="
+                    background: none;
+                    border: none;
+                    font-size: 1.5rem;
+                    cursor: pointer;
+                    color: #7f8c8d;
+                    padding: 0.5rem;
+                    border-radius: 50%;
+                    width: 40px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">&times;</button>
+            </div>
+            <div style="
+                line-height: 1.6;
+                color: #2c3e50;
+                font-size: 1.1rem;
+            ">
+                ${hintText.replace(/\n/g, '<br>')}
+            </div>
+            <div style="
+                margin-top: 2rem;
+                display: flex;
+                justify-content: flex-end;
+                gap: 1rem;
+            ">
+                <button onclick="closeHintModal()" style="
+                    padding: 0.8rem 1.5rem;
+                    background: #95a5a6;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: 600;
+                ">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeHintModal();
+        }
+    });
+}
+
+// ヒントモーダルを閉じる
+function closeHintModal() {
+    const modal = document.getElementById('hintModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// ★ 学習ガイドを読了としてマーク
+function markGuideStudied() {
+    const chapterId = {{ chapter.id }};
+
+    // まだ最後まで読んでいない場合はブロック
+    if (!hasReadStudyGuide) {
+        showMessage('学習ガイドを最後まで読んでからこのボタンを押してください。', 'error');
+        const guideSection = document.getElementById('studyGuideSection');
+        if (guideSection) {
+            guideSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        return;
+    }
+    
+    fetch(`/chapter/${chapterId}/mark_guide_studied/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('学習ガイドを読了としてマークしました', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showMessage('操作に失敗しました', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('操作中にエラーが発生しました', 'error');
+    });
+}
+
+// ★ チャプターを完了
+function completeChapter() {
+    const chapterId = {{ chapter.id }};
+    const currentScore = {% if user_progress.score %}{{ user_progress.score }}{% else %}0{% endif %};
+
+    // スコアが100%でなければ完了させない
+    if (currentScore < 100) {
+        showMessage('すべての練習問題に正解してからチャプターを完了してください。', 'error');
+        // 問題セクションへスクロール
+        const questionsSection = document.getElementById('questionsSection');
+        if (questionsSection) {
+            questionsSection.classList.remove('hidden');
+            questionsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        return;
+    }
+    
+    if (!confirm('このチャプターを完了としてマークしますか？')) {
+        return;
+    }
+
+    // ★★★ ここから追記部分 ★★★
+    // 今回のチャプター結果を記録する
+    // questions はこのチャプターの問題リストなので，その長さをそのまま問題数とみなす
+    const totalQuestions = {{ questions|length }};
+    // currentScore は 0〜100 のパーセントなので，正解数に変換
+    const correctCount = Math.round(totalQuestions * (currentScore / 100));
+    recordChapterResult(correctCount, totalQuestions);
+    // ★★★ 追記ここまで ★★★
+    
+    fetch(`/chapter/${chapterId}/complete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('おめでとうございます！チャプターを完了しました', 'success');
+            endStudyTime();
+            setTimeout(() => {
+                const completionSection = document.getElementById('completionSection');
+                if (completionSection) {
+                    completionSection.style.display = 'block';
+                    completionSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 1000);
+            setTimeout(() => {
+                location.reload();
+            }, 3000);
+        } else {
+            showMessage(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('操作中にエラーが発生しました', 'error');
+    });
+}
+// 進捗をリセット
+function resetProgress() {
+    const chapterId = {{ chapter.id }};
+    
+    if (!confirm('このチャプターの進捗をリセットしますか？すべての回答記録と学習状況が失われます。')) {
+        return;
+    }
+    
+    fetch(`/chapter/${chapterId}/reset/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('進捗をリセットしました', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showMessage('リセットに失敗しました', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('リセット中にエラーが発生しました', 'error');
+    });
+}
+
+// Enterキーで回答を送信する設定
+function setupEnterKeySubmit() {
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            const activeElement = document.activeElement;
+            if (activeElement && activeElement.classList.contains('blank-input')) {
+                const questionItem = activeElement.closest('.question-item');
+                const questionId = questionItem.id.replace('question-', '');
+                submitAnswer(questionId);
+            }
+        }
+    });
+}
+
+// 保存済み回答の初期表示（途中退出からの再開用）
+function initializeSavedAnswers() {
+    const questionItems = document.querySelectorAll('.question-item');
+    questionItems.forEach(item => {
+        const questionId = item.id.replace('question-', '');
+        const questionType = item.dataset.questionType;
+        const savedAnswer = item.dataset.userAnswer || '';
+        const isCorrect = item.dataset.userCorrect === '1';
+
+        if (!savedAnswer) {
+            return;  // 没有保存的答案就什么都不做
+        }
+
+        if (questionType === 'choice') {
+            // 选择题：把之前选中的 choice 高亮
+            const choices = item.querySelectorAll('.choice-item');
+            choices.forEach(choiceEl => {
+                if (choiceEl.dataset.choiceId === savedAnswer) {
+                    choiceEl.classList.add('selected');
+                }
+            });
+        } else if (questionType === 'fill') {
+            // 单空填空：把文本填回 input
+            const input = item.querySelector(`#answer-${questionId}`);
+            if (input) {
+                input.value = savedAnswer;
+            }
+        } else if (questionType === 'multi_fill') {
+            // 多空填空：按逗号分割，依次填回多个 input
+            const parts = savedAnswer.split(',');
+            const inputs = item.querySelectorAll('.multi-blank');
+            inputs.forEach((input, index) => {
+                if (parts[index]) {
+                    input.value = parts[index];
+                }
+            });
+        }
+
+        // 已经正解过的题，给一点视觉高亮（可选）
+        if (isCorrect) {
+            item.classList.add('answered-correct');
+        }
+    });
+}
+
+
+// メッセージ表示関数（右上浮動メッセージ）
+function showMessage(message, type) {
+    const existingMessages = document.querySelectorAll('.custom-message');
+    existingMessages.forEach(msg => msg.remove());
+    
+    const messageEl = document.createElement('div');
+    messageEl.textContent = message;
+    messageEl.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 1000;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        max-width: 300px;
+        word-wrap: break-word;
+    `;
+    
+    if (type === 'success') {
+        messageEl.style.background = 'linear-gradient(135deg, #27ae60, #2ecc71)';
+    } else if (type === 'error') {
+        messageEl.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
+    } else if (type === 'info') {
+        messageEl.style.background = 'linear-gradient(135deg, #3498db, #2980b9)';
+    }
+    
+    messageEl.classList.add('custom-message');
+    document.body.appendChild(messageEl);
+    
+    setTimeout(() => {
+        messageEl.style.opacity = '0';
+        messageEl.style.transform = 'translateX(100px)';
+        setTimeout(() => {
+            if (messageEl.parentNode) {
+                messageEl.parentNode.removeChild(messageEl);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// CSRFトークン取得関数
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

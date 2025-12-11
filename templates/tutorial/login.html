@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}登録 - Python学習システム{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <h2>🔐 アカウント登録</h2>
+        
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+        
+        {% if form.errors %}
+        <div class="alert alert-error">
+            <strong>ログインに失敗しました！</strong> ユーザー名とパスワードを確認してください。
+        </div>
+        {% endif %}
+        
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+            
+            <!-- 添加next参数 -->
+            {% if next %}
+                <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
+            
+            <div class="form-group">
+                <label for="id_username">ユーザー:</label>
+                <input type="text" name="username" id="id_username" required class="form-input" autofocus>
+            </div>
+            
+            <div class="form-group">
+                <label for="id_password">パスワード:</label>
+                <input type="password" name="password" id="id_password" required class="form-input">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-full">ログイン</button>
+        </form>
+        
+        <div class="auth-links">
+            <p>まだアカウントをお持ちでない方 <a href="{% url 'register' %}">こちらから登録</a></p>
+            <p><a href="{% url 'home' %}">← ホームに戻る</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

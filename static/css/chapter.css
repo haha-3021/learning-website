@@ -1,0 +1,215 @@
+/* 章节头部样式 */
+.chapter-header {
+    margin-bottom: 2rem;
+}
+
+.chapter-header h2 {
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.8rem;
+}
+
+.chapter-header p {
+    color: #666;
+    font-size: 1.1rem;
+}
+
+/* 问题容器样式 */
+.questions-container {
+    margin-top: 2rem;
+}
+
+/* 单个问题样式 */
+.question {
+    background: white;
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-left: 4px solid #4CAF50;
+}
+
+.question h4 {
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.question-text {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+/* 代码块样式 */
+.code-block {
+    background: #2d2d2d;
+    color: #f8f8f2;
+    padding: 1rem;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin: 1rem 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+}
+
+/* 答案区域样式 */
+.answer-section {
+    margin-top: 1.5rem;
+}
+
+/* 填空题样式 */
+.fill-blank {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.answer-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.8rem;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.answer-input:focus {
+    border-color: #4CAF50;
+    outline: none;
+}
+
+/* 选择题样式 */
+.choice-options {
+    margin: 1rem 0;
+}
+
+.choice-option {
+    margin: 0.8rem 0;
+    padding: 0.8rem;
+    background: #f8f9fa;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.choice-option:hover {
+    background: #e9ecef;
+}
+
+.choice-option input[type="radio"] {
+    margin-right: 0.5rem;
+}
+
+.choice-option label {
+    cursor: pointer;
+    margin-left: 0.5rem;
+}
+
+/* 答案反馈样式 */
+.answer-feedback {
+    margin-top: 1rem;
+    padding: 0.8rem;
+    border-radius: 5px;
+    font-weight: bold;
+    display: none;
+}
+
+.correct {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.incorrect {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* 完成消息样式 */
+.completion-message {
+    background: #d4edda;
+    color: #155724;
+    padding: 1rem;
+    border-radius: 5px;
+    text-align: center;
+    margin: 2rem 0;
+    border: 1px solid #c3e6cb;
+}
+
+.completion-message h3 {
+    margin-bottom: 0.5rem;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .fill-blank {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .answer-input {
+        min-width: auto;
+    }
+    
+    .question {
+        padding: 1rem;
+    }
+}
+/* 测验操作按钮样式 */
+.quiz-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    align-items: center;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #ecf0f1;
+    flex-wrap: wrap;
+}
+
+.quiz-actions .btn {
+    min-width: 140px;
+    text-align: center;
+}
+
+/* 重新学习按钮特殊样式 */
+.btn-warning {
+    background: #ffc107;
+    color: #212529;
+    border: none;
+}
+
+.btn-warning:hover {
+    background: #e0a800;
+    color: #212529;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .quiz-actions {
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+    
+    .quiz-actions .btn {
+        width: 100%;
+        min-width: auto;
+    }
+}
+
+/* 完成消息操作按钮 */
+.completion-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.completion-actions .btn {
+    min-width: 120px;
+}

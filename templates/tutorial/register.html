@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}登録 - Python学習システム{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <h2>🚀 新しいアカウントを登録</h2>
+
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+
+            {% if next %}
+                <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
+
+            <!-- ユーザー名 -->
+            <div class="form-group">
+                <label for="id_username">ユーザー名:</label>
+                <input
+                    type="text"
+                    name="username"
+                    id="id_username"
+                    class="form-input"
+                    required
+                    maxlength="150"
+                    value="{{ form.username.value|default_if_none:'' }}"
+                    placeholder="ユーザー名を入力してください"
+                >
+                {% if form.username.errors %}
+                    <div class="field-error">{{ form.username.errors }}</div>
+                {% endif %}
+                <small class="help-text">
+                    必須。150文字以内。英字・数字・@/./+/-/_ が使用できます。
+                </small>
+            </div>
+
+            <!-- メールアドレス -->
+            <div class="form-group">
+                <label for="id_email">メールアドレス:</label>
+                <input
+                    type="email"
+                    name="email"
+                    id="id_email"
+                    class="form-input"
+                    value="{{ form.email.value|default_if_none:'' }}"
+                    placeholder="メールアドレスを入力してください"
+                >
+                {% if form.email.errors %}
+                    <div class="field-error">{{ form.email.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- パスワード1 -->
+            <div class="form-group">
+                <label for="id_password1">パスワード:</label>
+                <input
+                    type="password"
+                    name="password1"
+                    id="id_password1"
+                    class="form-input"
+                    required
+                    placeholder="パスワードを入力してください"
+                >
+                {% if form.password1.errors %}
+                    <div class="field-error">{{ form.password1.errors }}</div>
+                {% endif %}
+                <small class="help-text">
+                    ・他の個人情報とあまり似ていないものにしてください。<br>
+                    ・8文字以上で設定してください。<br>
+                    ・よく使われる一般的なパスワードは使用できません。<br>
+                    ・数字だけのパスワードは使用できません。
+                </small>
+            </div>
+
+            <!-- パスワード2 -->
+            <div class="form-group">
+                <label for="id_password2">パスワード（確認）:</label>
+                <input
+                    type="password"
+                    name="password2"
+                    id="id_password2"
+                    class="form-input"
+                    required
+                    placeholder="もう一度同じパスワードを入力してください"
+                >
+                {% if form.password2.errors %}
+                    <div class="field-error">{{ form.password2.errors }}</div>
+                {% endif %}
+                <small class="help-text">
+                    確認のため、同じパスワードをもう一度入力してください。
+                </small>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full">登録する</button>
+        </form>
+
+        <div class="auth-links">
+            <p>すでにアカウントをお持ちですか？ <a href="{% url 'login' %}">今すぐログイン</a></p>
+            <p><a href="{% url 'home' %}">← ホームに戻る</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
