@@ -67,29 +67,25 @@ def register(request):
     """
     ユーザー登録ビュー
     """
-    from .forms import RegisterForm  # フォームのインポートを確認
-    
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password1')
-            
-            # 必要なモジュールをインポート
-            from django.contrib.auth import authenticate, login
-            from .models import UserProfile
-            
+
             user = authenticate(username=username, password=password)
             if user is not None:
                 login(request, user)
-                
+
                 # ユーザープロファイルが作成されていることを確認
                 if not hasattr(user, 'userprofile'):
                     UserProfile.objects.create(user=user)
-                
-                from django.contrib import messages
-                messages.success(request, f'アカウント {username} が正常に作成されました！Python学習システムへようこそ！')
+
+                messages.success(
+                    request,
+                    f'アカウント {username} が正常に作成されました！Python学習システムへようこそ！'
+                )
                 return redirect('home')
             else:
                 messages.error(request, 'ログインに失敗しました。再試行してください。')
@@ -97,7 +93,7 @@ def register(request):
             messages.error(request, '登録情報に誤りがあります。確認して再送信してください。')
     else:
         form = RegisterForm()
-    
+
     return render(request, 'tutorial/register.html', {'form': form})
 
 # ==================== 学習関連ビュー  ====================
