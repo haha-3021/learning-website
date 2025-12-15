@@ -4,8 +4,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('tutorial.urls')),  # 包含tutorial应用的URL
+    path("admin/", admin.site.urls),
+    path("", include("tutorial.urls")),          # 让 tutorial 成为首页入口
 ]
 
 if settings.DEBUG:
