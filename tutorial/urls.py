@@ -65,6 +65,3 @@ urlpatterns = [
     path('api/architecture-preview/', views.get_architecture_preview, name='api_architecture_preview'),
 ]
 
-# 错误处理页面
-handler404 = 'tutorial.views.page_not_found'
-handler500 = 'tutorial.views.server_error'
