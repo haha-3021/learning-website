@@ -15,9 +15,9 @@ class TutorialConfig(AppConfig):
         # 导入信号处理器
         try:
             import tutorial.signals
-            print("✅ 信号处理器导入成功")
+            print(" 信号处理器导入成功")
         except ImportError as e:
-            print(f"⚠️ 信号处理器导入失败: {e}")
+            print(f" 信号处理器导入失败: {e}")
         
         # 导入模型方法
         try:
@@ -28,9 +28,9 @@ class TutorialConfig(AppConfig):
             
             if not hasattr(User, 'get_statistics'):
                 User.add_to_class('get_statistics', get_user_statistics)
-                print("✅ 用户统计方法添加成功")
+                print(" 用户统计方法添加成功")
         except Exception as e:
-            print(f"⚠️ 模型方法初始化失败: {e}")
+            print(f" 模型方法初始化失败: {e}")
 
 def initialize_default_data(self):
     """
@@ -53,13 +53,13 @@ def initialize_default_data(self):
         
         # 如果必要表不存在，跳过初始化
         if not all(table in tables for table in needed_tables):
-            print("⏳ 数据库表未就绪，跳过默认数据初始化")
+            print(" 数据库表未就绪，跳过默认数据初始化")
             return
         
         # 检查是否已经有默认模板
         from .models import ArchitectureTemplate
         if not ArchitectureTemplate.objects.filter(is_default=True).exists():
-            print("🔄 创建默认架构图模板...")
+            print(" 创建默认架构图模板...")
             # 移除不存在的 layout_type 参数
             default_template = ArchitectureTemplate.objects.create(
                 name='記物本システム標準アーキテクチャ',
@@ -67,9 +67,9 @@ def initialize_default_data(self):
                 is_default=True,
                 is_active=True
             )
-            print(f"✅ 默认模板创建成功: {default_template.name}")
+            print(f" 默认模板创建成功: {default_template.name}")
             
-        print("✅ 默认数据初始化完成")
+        print(" 默认数据初始化完成")
         
     except Exception as e:
-        print(f"⚠️ 默认数据初始化失败: {e}")
+        print(f" 默认数据初始化失败: {e}")

@@ -883,7 +883,7 @@
             
             {% if not user_progress.completed %}
             <button class="btn btn-success" onclick="completeChapter()" 
-                    {% if not user_progress.studied_guide %}disabled{% endif %}>
+                    {% if study_guide and not user_progress.studied_guide %}disabled{% endif %}>
                 🎯 チャプターを完了
             </button>
             {% endif %}
@@ -949,7 +949,7 @@
     {% endif %}
 
     <!-- 問題セクション -->
-    <div class="questions-section hidden" id="questionsSection">
+    <div class="questions-section {% if study_guide %}hidden{% endif %}" id="questionsSection">
         <div class="section-header">
             <h2 class="section-title">❓ 練習問題</h2>
             <span class="questions-count">{{ questions|length }} 問</span>
@@ -1546,12 +1546,19 @@ function showAnswerResult(questionId, data, feedbackElement, explanationElement)
         showLocalMessage(feedbackElement, errorMessage, 'error');
         highlightCorrectAnswer(questionId);
     }
+
+    const qEl = document.getElementById(`question-${questionId}`);
+    if (qEl) {
+        qEl.dataset.userCorrect = data.is_correct ? "1" : "0";
+    }
     
     if (data.explanation) {
         showExplanation(explanationElement, data.explanation);
     }
     
-    disableQuestionActions(questionId);
+    if (data.is_correct) {
+        disableQuestionActions(questionId);
+    }
 }
 
 // 正解をハイライト表示（必要なら今后再具体实现）
@@ -1788,15 +1795,45 @@ function markGuideStudied() {
     });
 }
 
-// ★ チャプターを完了
+function calculateCurrentScore() {
+    const questions = document.querySelectorAll('.question-item');
+    if (questions.length === 0) return 100;
+
+    let correct = 0;
+    questions.forEach(q => {
+        if (q.dataset.isCorrect === "1") correct++;
+    });
+
+    return Math.round((correct / questions.length) * 100);
+}
+
+function getQuestionStats() {
+    const items = Array.from(document.querySelectorAll('.question-item'));
+    const total = items.length;
+
+    // 問題がない章は100%扱い
+    if (total === 0) return { total: 0, correct: 0, accuracy: 100 };
+
+    let correct = 0;
+    items.forEach(el => {
+        // data-user-correct="1" のときだけ正解扱い
+        if (el.dataset.userCorrect === "1") correct++;
+    });
+
+    const accuracy = Math.round((correct / total) * 100);
+    return { total, correct, accuracy };
+}
+
 function completeChapter() {
     const chapterId = {{ chapter.id }};
-    const currentScore = {% if user_progress.score %}{{ user_progress.score }}{% else %}0{% endif %};
+    const stats = getQuestionStats();
 
-    // スコアが100%でなければ完了させない
-    if (currentScore < 100) {
+    console.log("[completeChapter] stats:", stats); // ← 動作確認用
+
+    // 100%でなければ完了させない
+    if (stats.accuracy < 100) {
         showMessage('すべての練習問題に正解してからチャプターを完了してください。', 'error');
-        // 問題セクションへスクロール
+
         const questionsSection = document.getElementById('questionsSection');
         if (questionsSection) {
             questionsSection.classList.remove('hidden');
@@ -1804,50 +1841,49 @@ function completeChapter() {
         }
         return;
     }
-    
-    if (!confirm('このチャプターを完了としてマークしますか？')) {
-        return;
-    }
 
-    // ★★★ ここから追記部分 ★★★
-    // 今回のチャプター結果を記録する
-    // questions はこのチャプターの問題リストなので，その長さをそのまま問題数とみなす
-    const totalQuestions = {{ questions|length }};
-    // currentScore は 0〜100 のパーセントなので，正解数に変換
-    const correctCount = Math.round(totalQuestions * (currentScore / 100));
-    recordChapterResult(correctCount, totalQuestions);
-    // ★★★ 追記ここまで ★★★
-    
-    fetch(`/chapter/${chapterId}/complete/`, {
+    // ① まず「今回の結果」を記録（correct/total）
+    fetch(`/chapters/${chapterId}/record_result/`, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': getCookie('csrftoken')
-        }
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: `correct=${encodeURIComponent(stats.correct)}&total=${encodeURIComponent(stats.total)}`
     })
-    .then(response => response.json())
+    .then(r => r.json())
     .then(data => {
-        if (data.success) {
-            showMessage('おめでとうございます！チャプターを完了しました', 'success');
-            endStudyTime();
-            setTimeout(() => {
-                const completionSection = document.getElementById('completionSection');
-                if (completionSection) {
-                    completionSection.style.display = 'block';
-                    completionSection.scrollIntoView({ behavior: 'smooth' });
-                }
-            }, 1000);
-            setTimeout(() => {
-                location.reload();
-            }, 3000);
-        } else {
-            showMessage(data.message, 'error');
-        }
+        console.log("record_result:", data);
+        // 記録が失敗しても完了自体は進めたいので、ここでは止めない
     })
-    .catch(error => {
-        console.error('Error:', error);
-        showMessage('操作中にエラーが発生しました', 'error');
+    .catch(err => {
+        console.warn("record_result error:", err);
+    })
+    .finally(() => {
+        // ② そのあとチャプター完了API
+        fetch(`/chapter/${chapterId}/complete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            console.log("complete:", data);
+            if (data.success) {
+                showMessage(data.message || 'チャプターを完了しました！', 'success');
+                setTimeout(() => window.location.href = "{% url 'home' %}", 1200);
+            } else {
+                showMessage(data.message || '完了に失敗しました。', 'error');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showMessage('完了処理中にエラーが発生しました。', 'error');
+        });
     });
 }
+
 // 進捗をリセット
 function resetProgress() {
     const chapterId = {{ chapter.id }};
