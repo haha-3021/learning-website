@@ -32,6 +32,16 @@ def home(request):
         # すべてのアクティブなチャプターを取得
         chapters = Chapter.objects.filter(is_active=True).order_by('order')
         
+        # --- 【追加】ガイド表示判定のロジック ---
+        show_guide = False
+        if request.user.is_authenticated:
+            # セッションに 'guide_seen' が無い場合だけ、ガイドを表示対象にする
+            if not request.session.get('guide_seen', False):
+                show_guide = True
+                # 一度表示対象になったら、セッションに記録して次からは出さない
+                request.session['guide_seen'] = True
+        # --------------------------------------
+
         # ユーザーがログインしている場合、進捗情報を取得
         chapters_with_progress = []
         if request.user.is_authenticated:
@@ -51,13 +61,13 @@ def home(request):
             chapters_with_progress = [{'chapter': chapter, 'progress_width': 0} for chapter in chapters]
         
         context = {
-            'chapters_with_progress': chapters_with_progress
+            'chapters_with_progress': chapters_with_progress,
+            'show_guide': show_guide  # 【追加】テンプレートに伝える
         }
         return render(request, 'tutorial/home.html', context)
     
     except Exception as e:
         logger.error(f"ホームページ読み込みエラー: {e}")
-        # エラーハンドリング
         return render(request, 'home.html', {
             'chapters_with_progress': [],
             'error': '学習コンテンツの読み込み中にエラーが発生しました'
@@ -875,7 +885,7 @@ def record_chapter_result(request, chapter_id):
 @require_http_methods(["POST"])
 def complete_chapter(request, chapter_id):
     """
-     チャプターを完了
+    チャプターを完了
     """
     try:
         chapter = get_object_or_404(Chapter, id=chapter_id)
@@ -884,30 +894,41 @@ def complete_chapter(request, chapter_id):
             chapter=chapter
         )
         
-        # 既に完了している場合は直接返す
         if user_progress.completed:
             return JsonResponse({
                 'success': True, 
                 'message': 'チャプターは既に完了しています',
                 'already_completed': True
             })
-        
+
+        # --- 【追加】レベルアップ判定のための事前準備 ---
+        profile = request.user.userprofile
+        old_level = profile.level  # 更新前のレベルを保存
+        # ------------------------------------------
+
         # 完了としてマーク
         user_progress.completed = True
         user_progress.score = 100
         user_progress.save()
         
         # ユーザープロファイル情報を取得
-        profile = request.user.userprofile
+        # (models.pyのシグナル等で経験値が入る想定)
+        profile.refresh_from_db() # データベースの最新状態（更新後の経験値・レベル）を反映
         level_info = profile.get_level_info()
         
+        # --- 【追加】レベルアップの判定 ---
+        new_level = profile.level
+        is_level_up = new_level > old_level
+        # -------------------------------
+
         response_data = {
             'success': True, 
             'message': f'おめでとうございます！第{chapter.order}章: {chapter.title}を完了しました',
             'level_info': level_info,
             'chapter_completed': True,
-            'experience_gained': 50,  # 経験値情報を追加
-            'level_up': False  # デフォルト値、シグナルハンドラが実際の値を処理
+            'experience_gained': 50,
+            'level_up': is_level_up, # 【変更】判定結果を反映
+            'new_level': new_level    # 【追加】新しいレベルを渡す
         }
         
         return JsonResponse(response_data)
@@ -916,28 +937,40 @@ def complete_chapter(request, chapter_id):
         logger.error(f"チャプター完了エラー: {e}")
         return JsonResponse({'success': False, 'message': f'操作に失敗しました: {str(e)}'})
 
+@login_required
 def reset_chapter_progress(request, chapter_id):
     """
-    チャプターの進捗をリセット
+    チャプターの進捗をリセット（学習時間は保持）
     """
     try:
         chapter = get_object_or_404(Chapter, id=chapter_id)
+        
+        # 1. 進捗（クリア状態）を削除
         UserProgress.objects.filter(user=request.user, chapter=chapter).delete()
         
-        # 関連する誤答記録を削除
+        # 2. 関連する誤答記録を削除
         WrongAnswer.objects.filter(
             user=request.user,
             question__chapter=chapter
         ).delete()
 
-        # ★ このチャプターの途中回答も削除
+        # 3. チャプターの途中回答も削除
         UserQuestionAnswer.objects.filter(
             user=request.user,
             question__chapter=chapter
         ).delete()
         
-        messages.info(request, f'第{chapter.order}章の進捗をリセットしました')
-        return JsonResponse({'success': True, 'message': '進捗をリセットしました'})
+        # 【重要】ChapterStudyTime.objects.filter(...).delete() を「書かない」ことで
+        # 学習時間はデータベースに残り続けます。
+
+        # ユーザーに「時間は残っている」ことを伝えて安心させる
+        success_msg = f'第{chapter.order}章の進捗をリセットしました。※累計学習時間は保持されます。'
+        messages.info(request, success_msg)
+        
+        return JsonResponse({
+            'success': True, 
+            'message': success_msg
+        })
     
     except Exception as e:
         logger.error(f"進捗リセットエラー: {e}")

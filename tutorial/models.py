@@ -447,6 +447,22 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - Lv.{self.level} (EXP: {self.experience})"
+    
+    def add_experience(self, amount):
+        """增加经验值并检查是否升级"""
+        old_level = self.level
+        self.experience += amount
+        
+        # 假设每100经验一级，或者使用你现有的等级公式
+        new_level = (self.experience // 100) + 1
+        
+        is_leveled_up = False
+        if new_level > old_level:
+            self.level = new_level
+            is_leveled_up = True
+        
+        self.save()
+        return is_leveled_up, new_level
 
     # ==================== 学習時間関連メソッド ====================
     

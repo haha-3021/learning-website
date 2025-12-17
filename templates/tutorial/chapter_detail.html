@@ -862,7 +862,9 @@
             </div>
             <div class="stat-card">
                 <div class="stat-number">
-                    {% if user_progress.score %}{{ user_progress.score }}{% else %}0{% endif %}%
+                    <span id="current-score-display">
+                        {% if user_progress.score %}{{ user_progress.score }}{% else %}0{% endif %}%
+                    </span>%
                 </div>
                 <div class="stat-label">スコア</div>
             </div>
@@ -892,7 +894,7 @@
                 🚪 チャプターを中断して退出
             </button>
             
-            <button class="btn btn-outline" onclick="resetProgress()">
+            <button class="btn btn-outline" onclick="confirmAndResetProgress({{ chapter.id }})">
                 🔄 進捗をリセット
             </button>
         </div>
@@ -1080,9 +1082,13 @@
 let studySessionId = null;
 let studyStartTime = null;
 let studyTimer = null;
-let currentStudySeconds = 0;
+let currentStudySeconds;
 let autoSaveInterval = null;
 let isPageUnloading = false;
+
+
+const chapterIdForStorage = "{{ chapter.id }}";
+const storageKey = `study_seconds_ch_${chapterIdForStorage}`;
 
 // ★ 学習ガイドを「最後まで読んだかどうか」のフラグ
 let hasReadStudyGuide = false;
@@ -1176,13 +1182,14 @@ function handleVisibilityChange() {
         if (studyTimer) {
             clearInterval(studyTimer);
             studyTimer = null;
-            console.log('ページ非表示、タイマー停止と学習セッション終了');
-            endStudyTime();
+            console.log('ページ非表示：タイマー停止（セッションは維持）');
+            // 仅进行自动保存，不关闭会话
+            autoSaveStudyTime();
         }
     } else {
         if (!studyTimer) {
-            console.log('ページ表示、学習時間記録を再開');
-            startStudyTime();
+            console.log('ページ表示：タイマー再開');
+            startStudyTimeDisplay();
         }
     }
 }
@@ -1246,21 +1253,36 @@ function startStudyTime() {
 
 // 新しい学習セッションを作成
 function createNewStudySession() {
+    // --- 1. ローカルストレージから時間を復元（最優先） ---
+    const savedSeconds = localStorage.getItem(storageKey);
+    if (savedSeconds !== null) {
+        currentStudySeconds = parseInt(savedSeconds, 10);
+        console.log('ローカルストレージから時間を復元しました:', currentStudySeconds);
+    } else {
+        // キャッシュがない場合のみ初期化
+        currentStudySeconds = currentStudySeconds || 0;
+    }
+
+    // 画面表示を即座に更新（0表示のチラつきを防止）
+    updateStudyTimeDisplay();
+
+    // --- 2. 既存のセッションがあるか確認 ---
     const currentSessionId = {% if current_session_id %}{{ current_session_id }}{% else %}null{% endif %};
-    
-    console.log('現在のセッションID:', currentSessionId);
     
     if (currentSessionId) {
         studySessionId = currentSessionId;
-        console.log('バックエンドで作成されたセッションを使用:', studySessionId);
-        startStudyTimeDisplay();
-        startAutoSave();
+        console.log('既存のセッションを使用します:', studySessionId);
+        
+        // タイマーが二重に起動しないようにチェック
+        if (!studyTimer) {
+            startStudyTimeDisplay();
+            startAutoSave();
+        }
         return;
     }
     
-    console.log('警告：セッションIDが見つかりません、新規セッションを作成');
+    // --- 3. セッションがない場合は新規作成 ---
     const chapterId = {{ chapter.id }};
-    
     fetch(`/chapter/${chapterId}/start-study/`, {
         method: 'POST',
         headers: {
@@ -1272,17 +1294,21 @@ function createNewStudySession() {
     .then(data => {
         if (data.success) {
             studySessionId = data.study_session_id;
-            studyStartTime = new Date();
-            currentStudySeconds = 0;
-            console.log('学習時間記録開始成功:', studySessionId);
-            startStudyTimeDisplay();
-            startAutoSave();
-        } else {
-            console.error('学習時間記録開始失敗:', data.message);
+            console.log('新規セッションの作成に成功しました:', studySessionId);
+            
+            // ローカルに保存された時間がない場合のみ、バックエンドの値を使用
+            if (!localStorage.getItem(storageKey)) {
+                currentStudySeconds = data.initial_seconds || 0;
+            }
+
+            if (!studyTimer) {
+                startStudyTimeDisplay();
+                startAutoSave();
+            }
         }
     })
     .catch(error => {
-        console.error('学習時間記録開始エラー:', error);
+        console.error('セッション開始エラー:', error);
     });
 }
 
@@ -1307,6 +1333,9 @@ function startStudyTimeDisplay() {
 
 // 学習時間表示を更新
 function updateStudyTimeDisplay() {
+    // 关键：将当前秒数实时存入本地
+    localStorage.setItem(storageKey, currentStudySeconds);
+
     const minutes = Math.floor(currentStudySeconds / 60);
     const seconds = currentStudySeconds % 60;
     const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
@@ -1314,12 +1343,8 @@ function updateStudyTimeDisplay() {
     const studyTimeValue = document.getElementById('studyTimeValue');
     const currentStudyTime = document.getElementById('currentStudyTime');
     
-    if (studyTimeValue) {
-        studyTimeValue.textContent = timeString;
-    }
-    if (currentStudyTime) {
-        currentStudyTime.textContent = `学習時間: ${timeString}`;
-    }
+    if (studyTimeValue) studyTimeValue.textContent = timeString;
+    if (currentStudyTime) currentStudyTime.textContent = `学習時間: ${timeString}`;
 }
 
 // 学習時間記録を終了
@@ -1528,34 +1553,81 @@ function recordChapterResult(correctCount, totalQuestions) {
 
 // 回答結果を表示
 function showAnswerResult(questionId, data, feedbackElement, explanationElement) {
-    console.log('回答結果を表示:', data);
+    console.log('显示回答结果:', data);
     
     feedbackElement.innerHTML = '';
     
+    // 1. 处理正确/错误显示
     if (data.is_correct) {
-        showLocalMessage(feedbackElement, '✅ 正解です！', 'success');
+        showLocalMessage(feedbackElement, '✅ 回答正确！', 'success');
         highlightCorrectAnswer(questionId);
     } else {
-        let errorMessage = '❌ 不正解です';
-        if (data.correct_answer) {
-            errorMessage += `<br><strong>正解:</strong> ${data.correct_answer}`;
+        // --- ★ 重点修改区域：就在这个 else 里面 ★ ---
+        let errorMessage = '❌ 回答错误';
+        
+        // 获取后端传来的原始答案字符串
+        let rawAnswer = data.correct_answer || '';
+        
+        // 【核心修复】：防止浏览器把 <class 'float'> 当成 HTML 标签
+        // 我们把 < 换成 &lt; 把 > 换成 &gt;
+        let safeAnswer = rawAnswer.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        
+        if (safeAnswer) {
+            // 使用 <code> 标签包裹，让编程代码显示更清晰
+            errorMessage += `<br><strong>正确答案:</strong> <code>${safeAnswer}</code>`;
         }
+        
         if (data.message) {
             errorMessage += `<br>${data.message}`;
         }
         showLocalMessage(feedbackElement, errorMessage, 'error');
         highlightCorrectAnswer(questionId);
+        // --- ★ 修改结束 ★ ---
     }
 
+    // 2. 更新题目数据集（用于计算进度）
     const qEl = document.getElementById(`question-${questionId}`);
     if (qEl) {
         qEl.dataset.userCorrect = data.is_correct ? "1" : "0";
     }
+
+    // 3. 实时更新页面上的分数数字（解决“必须点完了才能看分数”的违和感）
+    const stats = getQuestionStats(); 
+    const scoreSpan = document.getElementById('current-score-display');
+    if (scoreSpan) {
+        scoreSpan.textContent = stats.accuracy; 
+    }
     
+    // 4. 全问正确时的逻辑处理（自动停止计时）
+    if (data.is_correct) {
+        if (stats.accuracy === 100) {
+            console.log('达成全问正确！正在停止计时器...');
+            
+            if (studyTimer) {
+                clearInterval(studyTimer);
+                studyTimer = null;
+            }
+            if (autoSaveInterval) {
+                clearInterval(autoSaveInterval);
+                autoSaveInterval = null;
+            }
+
+            autoSaveStudyTime();
+            
+            if (typeof storageKey !== 'undefined') {
+                localStorage.removeItem(storageKey);
+            }
+
+            showMessage('恭喜！全问正确。学习时间已停止记录。', 'success');
+        }
+    }
+    
+    // 显示解析
     if (data.explanation) {
         showExplanation(explanationElement, data.explanation);
     }
     
+    // 如果回答正确，禁用按钮防止重复提交
     if (data.is_correct) {
         disableQuestionActions(questionId);
     }
@@ -1871,17 +1943,100 @@ function completeChapter() {
         .then(data => {
             console.log("complete:", data);
             if (data.success) {
-                showMessage(data.message || 'チャプターを完了しました！', 'success');
-                setTimeout(() => window.location.href = "{% url 'home' %}", 1200);
+                // 如果后端返回了 level_up 为 true
+                if (data.level_up) {
+                    // 弹出华丽的升级弹窗，并将原本的跳转逻辑放进弹窗的关闭回调中
+                    showLevelUpNotification(data.new_level, () => {
+                        window.location.href = "{% url 'home' %}";
+                    });
+                } else {
+                    // 没有升级，执行你原来的逻辑：显示提示并自动跳转
+                    if (typeof showCustomMessage === 'function') {
+                        showCustomMessage(data.message || 'チャプターを完了しました！', 'success');
+                    } else {
+                        alert(data.message || 'チャプターを完了しました！');
+                    }
+                    setTimeout(() => window.location.href = "{% url 'home' %}", 1200);
+                }
             } else {
-                showMessage(data.message || '完了に失敗しました。', 'error');
+                const msg = data.message || '完了に失敗しました。';
+                typeof showCustomMessage === 'function' ? showCustomMessage(msg, 'error') : alert(msg);
+            }
+        })
+    });
+}
+
+function confirmAndResetProgress(chapterId) {
+    // 増加人性化的确认提示
+    const confirmMsg = "このチャプターの進捗をリセットしますか？\n\n注意：学習記録は清空されますが、【累計学習時間】は保持されますのでご安心ください。";
+    
+    if (confirm(confirmMsg)) {
+        fetch(`/chapter/${chapterId}/reset/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 重置成功后刷新页面
+                window.location.reload();
+            } else {
+                alert(data.message);
             }
         })
         .catch(err => {
-            console.error(err);
-            showMessage('完了処理中にエラーが発生しました。', 'error');
+            console.error('Error:', err);
+            alert('操作失败，请检查网络连接');
         });
-    });
+    }
+}
+
+function showLevelUpNotification(level, onClose) {
+    const overlay = document.createElement('div');
+    overlay.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); z-index: 99999;
+        display: flex; justify-content: center; align-items: center;
+        backdrop-filter: blur(10px);
+    `;
+
+    overlay.innerHTML = `
+        <div style="background: white; padding: 3rem; border-radius: 30px; text-align: center; 
+                    box-shadow: 0 0 50px rgba(255,215,0,0.6); border: 5px solid #FFD700;
+                    max-width: 400px; width: 90%; animation: popIn 0.5s cubic-bezier(0.17, 0.89, 0.32, 1.49);">
+            <div style="font-size: 5rem; margin-bottom: 1rem;">🎊</div>
+            <h1 style="color: #2c3e50; margin: 0; font-size: 2rem;">LEVEL UP!</h1>
+            <p style="color: #7f8c8d; font-size: 1.1rem; margin-top: 10px;">おめでとうございます！</p>
+            <div style="background: linear-gradient(135deg, #FFD700, #FFA500); 
+                        color: white; font-size: 3rem; font-weight: bold; 
+                        padding: 1rem; border-radius: 20px; margin: 1.5rem 0;">
+                Lv. ${level}
+            </div>
+            <button id="level-up-close-btn" style="
+                background: #764ba2; color: white; border: none; padding: 12px 40px; 
+                border-radius: 50px; font-size: 1.2rem; cursor: pointer; 
+                box-shadow: 0 4px 15px rgba(118,75,162,0.4); transition: transform 0.2s;">
+                ホームに戻る
+            </button>
+        </div>
+        <style>
+            @keyframes popIn {
+                from { opacity: 0; transform: scale(0.5); }
+                to { opacity: 1; transform: scale(1); }
+            }
+        </style>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // 点击按钮后执行回调（跳转首页）
+    document.getElementById('level-up-close-btn').onclick = () => {
+        overlay.remove();
+        if (onClose) onClose();
+    };
 }
 
 // 進捗をリセット

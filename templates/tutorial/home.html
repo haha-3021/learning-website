@@ -13,7 +13,6 @@
     <p>このサイトでは、穴埋め問題や選択問題を解きながら、
         PythonとDjangoを使って「資産・物品管理システム」を作る方法を学ぶことができます。</p>
     
-    
     {% if not user.is_authenticated %}
     <div class="guest-message">
         <p><strong>学習を始めるには、まずログインまたは新規登録してください。</strong></p>
@@ -72,6 +71,30 @@
     {% endfor %}
 </div>
 
+{% if show_guide %}
+<div id="guide-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+    <div style="background: white; padding: 2.5rem; border-radius: 20px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); animation: guideSlideUp 0.5s ease-out;">
+        <h2 style="color: #764ba2; margin-bottom: 1.5rem;">🚀 学習ガイド</h2>
+        
+        <div style="text-align: left; background: #f8f9fa; padding: 1.5rem; border-radius: 15px; margin-bottom: 1.5rem;">
+            <p style="margin: 10px 0;"><strong>📈 経験値 (XP):</strong> チャプター完了で +50 XP、問題正解で +10 XP！</p>
+            <p style="margin: 10px 0;"><strong>🆙 レベルアップ:</strong> 経験値が貯まるとレベルが上がり、称号が進化します。</p>
+            <p style="margin: 10px 0;"><strong>🧱 積木モジュール:</strong> レベルアップすると、新しいシステム設計用の積木が解放されます！</p>
+        </div>
+        
+        <button onclick="document.getElementById('guide-overlay').remove()" style="background: #764ba2; color: white; border: none; padding: 12px 40px; border-radius: 50px; cursor: pointer; font-size: 1.1rem; font-weight: bold; transition: transform 0.2s;">
+            わかった、学習を始める！
+        </button>
+    </div>
+</div>
+
+<style>
+@keyframes guideSlideUp {
+    from { opacity: 0; transform: translateY(50px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+{% endif %}
 <div class="system-requirements">
     <h3>💻 システム要件</h3>
     <div>
