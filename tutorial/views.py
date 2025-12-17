@@ -109,6 +109,7 @@ def register(request):
 # ==================== 学習関連ビュー  ====================
 @login_required
 def chapter_detail(request, chapter_id):
+    # 1. 获取当前章节
     chapter = Chapter.objects.filter(id=chapter_id, is_active=True).first()
     if chapter is None:
         messages.error(request, "指定されたチャプターが見つかりません。")
@@ -116,9 +117,9 @@ def chapter_detail(request, chapter_id):
 
     logger.info(f"[chapter_detail] user={request.user} chapter={chapter.title}")
 
+    # 2. 学习计时逻辑
     study_session = None
     try:
-        # このユーザー & このチャプター のアクティブセッションを探す
         study_session = ChapterStudyTime.objects.filter(
             user=request.user,
             chapter=chapter,
@@ -126,7 +127,6 @@ def chapter_detail(request, chapter_id):
         ).first()
 
         if study_session is None:
-            # 念のため「他チャプターの未終了セッション」は終了だけしておく
             try:
                 ChapterStudyTime.objects.filter(
                     user=request.user,
@@ -135,42 +135,30 @@ def chapter_detail(request, chapter_id):
             except Exception as inner_e:
                 logger.error(f"[chapter_detail] 古いセッション終了エラー: {inner_e}", exc_info=True)
 
-            # 新しいセッションを作成
             study_session = ChapterStudyTime.objects.create(
                 user=request.user,
                 chapter=chapter,
                 start_time=timezone.now(),
             )
-            logger.info(f"[chapter_detail] 新規セッション作成 id={study_session.id}")
-        else:
-            logger.info(f"[chapter_detail] 既存セッション利用 id={study_session.id}")
     except Exception as e:
-        logger.error(f"[chapter_detail] 学習セッション準備エラー: {e}", exc_info=True)
-        # 学習時間機能は一旦あきらめて、ページだけ出す
+        logger.error(f"[chapter_detail] 学習セッション准备エラー: {e}", exc_info=True)
         study_session = None
 
-    # 3. 学習ガイド
+    # 3. 获取学习指南
     try:
-        study_guide = StudyGuide.objects.filter(
-            chapter=chapter,
-            is_published=True
-        ).first()
+        study_guide = StudyGuide.objects.filter(chapter=chapter, is_published=True).first()
     except Exception as e:
         logger.error(f"[chapter_detail] 学習ガイド取得エラー: {e}", exc_info=True)
         study_guide = None
 
-    # 4. 問題一覧
+    # 4. 获取问题列表
     try:
-        questions = Question.objects.filter(
-            chapter=chapter,
-            is_active=True
-        ).order_by("order")
+        questions = Question.objects.filter(chapter=chapter, is_active=True).order_by("order")
     except Exception as e:
-        logger.error(f"[chapter_detail] 問題取得エラー: {e}", exc_info=True)
-        from django.db.models.query import EmptyQuerySet  # 念のため
+        logger.error(f"[chapter_detail] 问题取得エラー: {e}", exc_info=True)
         questions = Question.objects.none()
 
-    # 4.5 ユーザーの途中回答を読み込む（あれば）
+    # 4.5 读取用户之前的回答
     try:
         user_answers_qs = UserQuestionAnswer.objects.filter(
             user=request.user,
@@ -186,39 +174,42 @@ def chapter_detail(request, chapter_id):
                 q.user_answer = ""
                 q.user_is_correct = None
     except Exception as e:
-        logger.error(f"[chapter_detail] ユーザー回答取得エラー: {e}", exc_info=True)
-    
-    # 5. 進捗
+        logger.error(f"[chapter_detail] 用户回答取得エラー: {e}", exc_info=True)
+
+    # 5. 获取进度
     try:
-        user_progress, _ = UserProgress.objects.get_or_create(
-            user=request.user,
-            chapter=chapter,
-        )
+        user_progress, _ = UserProgress.objects.get_or_create(user=request.user, chapter=chapter)
     except Exception as e:
-        logger.error(f"[chapter_detail] 進捗取得エラー: {e}", exc_info=True)
+        logger.error(f"[chapter_detail] 进捗取得エラー: {e}", exc_info=True)
         user_progress = None
 
-    # 6. テンプレートに渡す
+    # --- ★ 核心修改：精准查找下一章（基于列表索引） ★ ---
+    # 按照你页面上看到的顺序（order, 然后 id）排列所有章节
+    all_chapters = list(Chapter.objects.filter(is_active=True).order_by('order', 'id'))
+    next_chapter = None
+    try:
+        current_index = all_chapters.index(chapter)
+        if current_index < len(all_chapters) - 1:
+            next_chapter = all_chapters[current_index + 1]
+    except (ValueError, IndexError):
+        next_chapter = None
+    # --------------------------------------------------
+
+    # 6. 渲染
     context = {
         "chapter": chapter,
         "study_guide": study_guide,
         "questions": questions,
         "user_progress": user_progress,
         "current_session_id": study_session.id if study_session else None,
+        "next_chapter": next_chapter,
     }
 
-    # 7. テンプレート側のエラーも、真っ白ではなく内容を出す
     try:
         return render(request, "tutorial/chapter_detail.html", context)
     except Exception as e:
         logger.error(f"[chapter_detail] テンプレートエラー: {e}", exc_info=True)
-        # 最後の砦：シンプルな画面で原因だけ見せる
-        return HttpResponse(
-            f"チャプター「{chapter.title}」のテンプレート "
-            f"(tutorial/chapter_detail.html) でエラーが発生しています。<br>"
-            f"エラー内容: {e}"
-        )
-
+        return HttpResponse(f"Error: {e}")
 
 @login_required
 @require_http_methods(["POST"])

@@ -1056,21 +1056,15 @@
         {% endfor %}
     </div>
 
-    <div id="next-chapter-section" style="display: none; text-align: center; margin: 40px 0; padding: 30px; border-top: 2px dashed #ddd;">
-        <div style="background: #f9f9f9; padding: 25px; border-radius: 15px; border: 1px solid #eee;">
-            {% if next_chapter %}
-                <h3 style="color: #27ae60; margin-bottom: 15px;">🎉 お疲れ様でした！このチャプターをクリアしました。</h3>
-                <a href="{% url 'chapter_detail' next_chapter.id %}" class="btn btn-success btn-lg" style="padding: 15px 40px; font-size: 1.2rem; border-radius: 50px;">
-                    次のチャプターへ進む：{{ next_chapter.title }} ➔
-                </a>
-            {% else %}
-                <h3 style="color: #27ae60;">🎊 全てのチャプターを完了しました！</h3>
-                <a href="{% url 'course_detail' chapter.course.id %}" class="btn btn-primary">
-                    コース一覧に戻る
-                </a>
-            {% endif %}
-        </div>
-    </div>
+    <div style="margin-top: 30px; text-align: center;">
+        {% if next_chapter %}
+            <a href="{% url 'chapter_detail' next_chapter.id %}" class="btn btn-success">
+                NEXT：{{ next_chapter.title }}
+            </a>
+        {% else %}
+            <a href="/" class="btn btn-secondary">ホームページに戻る</a>
+        {% endif %}
+</div>
 
     <!-- 完了セクション -->
     {% if user_progress.completed %}
@@ -1586,11 +1580,11 @@ function showAnswerResult(questionId, data, feedbackElement, explanationElement)
     
     // 1. 处理正确/错误显示
     if (data.is_correct) {
-        showLocalMessage(feedbackElement, '✅ 回答正确！', 'success');
+        showLocalMessage(feedbackElement, '✅ 正解！', 'success');
         highlightCorrectAnswer(questionId);
     } else {
         // --- ★ 重点修改区域：就在这个 else 里面 ★ ---
-        let errorMessage = '❌ 回答错误';
+        let errorMessage = '❌ 不正解。';
         
         // 获取后端传来的原始答案字符串
         let rawAnswer = data.correct_answer || '';
@@ -1601,7 +1595,7 @@ function showAnswerResult(questionId, data, feedbackElement, explanationElement)
         
         if (safeAnswer) {
             // 使用 <code> 标签包裹，让编程代码显示更清晰
-            errorMessage += `<br><strong>正确答案:</strong> <code>${safeAnswer}</code>`;
+            errorMessage += `<br><strong>正解:</strong> <code>${safeAnswer}</code>`;
         }
         
         if (data.message) {
@@ -1629,12 +1623,6 @@ function showAnswerResult(questionId, data, feedbackElement, explanationElement)
     if (data.is_correct) {
         if (stats.accuracy === 100) {
             console.log('達成全問正解！案内ボタンを表示します...');
-
-            const nextBtnArea = document.getElementById('next-chapter-section');
-            if (nextBtnArea) {
-                nextBtnArea.style.display = 'block'; 
-                nextBtnArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
             
             if (studyTimer) {
                 clearInterval(studyTimer);
