@@ -813,6 +813,11 @@
 .hidden {
     display: none !important;
 }
+
+@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
 {% endblock %}
 
@@ -1051,6 +1056,22 @@
         {% endfor %}
     </div>
 
+    <div id="next-chapter-section" style="display: none; text-align: center; margin: 40px 0; padding: 30px; border-top: 2px dashed #ddd;">
+        <div style="background: #f9f9f9; padding: 25px; border-radius: 15px; border: 1px solid #eee;">
+            {% if next_chapter %}
+                <h3 style="color: #27ae60; margin-bottom: 15px;">🎉 お疲れ様でした！このチャプターをクリアしました。</h3>
+                <a href="{% url 'chapter_detail' next_chapter.id %}" class="btn btn-success btn-lg" style="padding: 15px 40px; font-size: 1.2rem; border-radius: 50px;">
+                    次のチャプターへ進む：{{ next_chapter.title }} ➔
+                </a>
+            {% else %}
+                <h3 style="color: #27ae60;">🎊 全てのチャプターを完了しました！</h3>
+                <a href="{% url 'course_detail' chapter.course.id %}" class="btn btn-primary">
+                    コース一覧に戻る
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- 完了セクション -->
     {% if user_progress.completed %}
     <div class="completion-section" id="completionSection">
@@ -1121,6 +1142,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('completionSection').style.display = 'block';
     }, 1000);
     {% endif %}
+
+    const stats = getQuestionStats();
+    if (stats.accuracy === 100) {
+        const nextBtnArea = document.getElementById('next-chapter-section');
+        if (nextBtnArea) nextBtnArea.style.display = 'block';
+    }
 });
 
 // ★ チャプターを中断して退出
@@ -1601,7 +1628,13 @@ function showAnswerResult(questionId, data, feedbackElement, explanationElement)
     // 4. 全问正确时的逻辑处理（自动停止计时）
     if (data.is_correct) {
         if (stats.accuracy === 100) {
-            console.log('达成全问正确！正在停止计时器...');
+            console.log('達成全問正解！案内ボタンを表示します...');
+
+            const nextBtnArea = document.getElementById('next-chapter-section');
+            if (nextBtnArea) {
+                nextBtnArea.style.display = 'block'; 
+                nextBtnArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
             
             if (studyTimer) {
                 clearInterval(studyTimer);
@@ -1618,7 +1651,7 @@ function showAnswerResult(questionId, data, feedbackElement, explanationElement)
                 localStorage.removeItem(storageKey);
             }
 
-            showMessage('恭喜！全问正确。学习时间已停止记录。', 'success');
+            showMessage('恭喜！全問正解。学習記録を保存しました。', 'success');
         }
     }
     
