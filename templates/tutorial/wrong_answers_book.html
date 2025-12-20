@@ -713,55 +713,26 @@
         <p>ここでは間違えた問題を確認・復習できます。学習時間の統計も確認できます。</p>
     </div>
 
-    <!-- 学習時間統計セクション - 常に表示 -->
     <div class="study-time-section">
         <div class="section-header">
-            <h2>⏱️ 学習時間統計</h2>
+            <h2>⏱️ 毎日学習時間 (直近7日間)</h2>
         </div>
-        
+    
         <div class="time-stats-overview">
             <div class="total-time-card">
                 <div class="time-icon">📚</div>
                 <div class="time-info">
-                    <div class="time-label">総学習時間</div>
+                    <div class="time-label">総累計学習時間</div>
                     <div class="time-value">{{ total_study_time }}</div>
                     <small style="opacity: 0.7; font-size: 0.8rem;">
-                        ({{ chapters_with_wrong_answers|length }} チャプター学習済み)
+                        (総学習チャプター数: {{ chapters_with_wrong_answers|length }})
                     </small>
                 </div>
             </div>
         </div>
 
-        <div class="chapter-time-breakdown">
-            <h3>📊 チャプター別学習時間</h3>
-            
-            {% if chapters_with_wrong_answers %}
-            <div class="time-breakdown-list">
-                {% for chapter_data in chapters_with_wrong_answers %}
-                {% if chapter_data.study_seconds > 0 %}
-                <div class="chapter-time-item">
-                    <div class="chapter-time-info">
-                        <span class="chapter-name">{{ chapter_data.chapter.title }}</span>
-                        <span class="chapter-time">{{ chapter_data.study_time }}</span>
-                    </div>
-                    <div class="time-progress-bar">
-                        {% if max_study_seconds > 0 %}
-                        {% widthratio chapter_data.study_seconds max_study_seconds 100 as progress_width %}
-                        <div class="progress-fill" style="width: {{ progress_width }}%"></div>
-                        {% else %}
-                        <div class="progress-fill" style="width: 0%"></div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="no-time-data">
-                <p>まだ学習時間の記録がありません</p>
-                <small>チャプターを学習すると、ここに学習時間が表示されます</small>
-            </div>
-            {% endif %}
+        <div class="chart-wrapper" style="margin-top: 20px; background: #fff; padding: 15px; border-radius: 10px;">
+            <canvas id="dailyStudyChart" style="max-height: 250px;"></canvas>
         </div>
     </div>
 
@@ -982,6 +953,41 @@ function clearChapterWrongAnswers(chapterId) {
         });
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('dailyStudyChart').getContext('2d');
+    
+    const labels = {{ chart_labels_json|safe }};
+    const data = {{ chart_values_json|safe }};
+
+    new Chart(ctx, {
+        type: 'bar', // 棒グラフ
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '学習時間 (分)',
+                data: data,
+                backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                borderColor: '#3498db',
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: '分' }
+                }
+            },
+            plugins: {
+                legend: { display: false } // 凡例は非表示でスッキリ
+            }
+        }
+    });
+});
 
 // メッセージ表示関数
 function showMessage(message, type) {

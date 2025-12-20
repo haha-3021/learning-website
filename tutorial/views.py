@@ -5,7 +5,8 @@ from django.contrib.auth import login, authenticate
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.db.models import Count, Q, Max, Exists, OuterRef
+from django.db.models import Count, Q, Max, Exists, OuterRef, Sum
+from django.db.models.functions import TruncDate
 from datetime import timedelta
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -183,8 +184,6 @@ def chapter_detail(request, chapter_id):
         logger.error(f"[chapter_detail] 进捗取得エラー: {e}", exc_info=True)
         user_progress = None
 
-    # --- ★ 核心修改：精准查找下一章（基于列表索引） ★ ---
-    # 按照你页面上看到的顺序（order, 然后 id）排列所有章节
     all_chapters = list(Chapter.objects.filter(is_active=True).order_by('order', 'id'))
     next_chapter = None
     try:
@@ -193,7 +192,6 @@ def chapter_detail(request, chapter_id):
             next_chapter = all_chapters[current_index + 1]
     except (ValueError, IndexError):
         next_chapter = None
-    # --------------------------------------------------
 
     # 6. 渲染
     context = {
@@ -502,18 +500,16 @@ def clear_chapter_wrong_answers(request, chapter_id):
 @login_required
 def wrong_answers_book(request):
     """
-    間違いノート（学習時間と正答率の集計画面）
-    - WrongAnswer と ChapterStudyTime を元に集計
-    - ChapterResult は「正答率の履歴」テーブル用
+    間違いノート（日別学習時間と正答率の集計画面）
     """
     try:
         user = request.user
 
+        # --- 累計得点の計算 ---
         total_correct = UserQuestionAnswer.objects.filter(
             user=user,
             is_correct=True
         ).count()
-        # 1問正解につき10点として累計得点を計算
         total_score = total_correct * 10
 
         # === 1. 全誤答レコード ===
@@ -524,33 +520,45 @@ def wrong_answers_book(request):
         ).order_by('-created_at')
         total_wrong = wrong_answers_qs.count()
 
-        # === 2. 学習時間（全チャプター合計 ＋ チャプター別） ===
-        # 終了していないセッションでも、total_seconds があれば学習時間として集計する
-        completed_sessions = ChapterStudyTime.objects.filter(
+        # === 2. 学習時間（全累計 ＋ 【新規】日別統計） ===
+        # 全累計秒数の計算
+        total_seconds_data = ChapterStudyTime.objects.filter(
             user=user,
             total_seconds__gt=0
-        )
-
-        total_seconds = 0
-        chapter_seconds_map = {}  # {chapter_id: 秒数}
-
-        for session in completed_sessions:
-            # total_seconds フィールドがあれば優先的に使う
-            dur = session.total_seconds or 0
-            # 念のため start/end からも計算できるようにしておく
-            if dur <= 0 and session.start_time and session.end_time:
-                dur = int((session.end_time - session.start_time).total_seconds())
-
-            if dur and dur > 0:
-                total_seconds += dur
-                cid = session.chapter_id
-                chapter_seconds_map[cid] = chapter_seconds_map.get(cid, 0) + dur
-
-        total_seconds = int(total_seconds)
+        ).aggregate(total=Sum('total_seconds'))
+        
+        total_seconds = int(total_seconds_data['total'] or 0)
         total_study_time = str(timedelta(seconds=total_seconds))
-        max_study_seconds = max(chapter_seconds_map.values()) if chapter_seconds_map else 0
 
-        # === 3. 誤答をチャプターごとにまとめる ===
+        # --- 【新規】直近7日間の日別集計ロジック ---
+        today = timezone.now().date()
+        # 6日前から今日までの日付リストを作成（グラフのX軸用）
+        date_list = [today - timedelta(days=i) for i in range(6, -1, -1)]
+        
+        daily_stats = ChapterStudyTime.objects.filter(
+            user=user,
+            start_time__date__gte=date_list[0], # 7日前の日付
+            total_seconds__gt=0
+        ).annotate(
+            date=TruncDate('start_time')
+        ).values('date').annotate(
+            total_daily_seconds=Sum('total_seconds')
+        ).order_by('date')
+
+        # データベースの結果を辞書形式に変換 {datetime.date: seconds}
+        stats_map = {stat['date']: stat['total_daily_seconds'] for stat in daily_stats}
+
+        # グラフ用のラベル（月/日）とデータ（分単位に変換）を作成
+        chart_labels = [d.strftime('%m/%d') for d in date_list]
+        chart_values = [round(stats_map.get(d, 0) / 60, 1) for d in date_list]
+
+        # === 3. 誤答をチャプターごとにまとめる（リスト表示用） ===
+        # ※ここは既存のロジックを維持しますが、グラフ用の変数は別に渡します
+        chapter_seconds_map = {}
+        sessions = ChapterStudyTime.objects.filter(user=user, total_seconds__gt=0)
+        for s in sessions:
+            chapter_seconds_map[s.chapter_id] = chapter_seconds_map.get(s.chapter_id, 0) + s.total_seconds
+
         wrong_by_chapter = {}
         for wa in wrong_answers_qs:
             cid = wa.question.chapter_id
@@ -562,116 +570,60 @@ def wrong_answers_book(request):
         for chapter_id, wa_list in wrong_by_chapter.items():
             try:
                 chapter = wa_list[0].question.chapter
+                processed_chapter_ids.add(chapter_id)
+                chapter_seconds = int(chapter_seconds_map.get(chapter_id, 0))
+                total_questions = Question.objects.filter(chapter=chapter).count()
+                unique_wrong_questions = len({wa.question_id for wa in wa_list})
+
+                accuracy = int((max(total_questions - unique_wrong_questions, 0) / total_questions * 100)) if total_questions > 0 else None
+
+                chapters_with_wrong_answers.append({
+                    'chapter': chapter,
+                    'wrong_answers': wa_list,
+                    'count': len(wa_list),
+                    'study_seconds': chapter_seconds,
+                    'study_time': str(timedelta(seconds=chapter_seconds)),
+                    'total_questions': total_questions,
+                    'unique_wrong_questions': unique_wrong_questions,
+                    'accuracy': accuracy,
+                })
             except Exception:
-                # 何かしらデータ不整合があっても全体は落とさない
                 continue
 
-            processed_chapter_ids.add(chapter_id)
+        # チャプター順にソート
+        chapters_with_wrong_answers.sort(key=lambda d: (getattr(d['chapter'], 'order', 0), d['chapter'].id))
 
-            # このチャプターの学習時間
-            chapter_seconds = int(chapter_seconds_map.get(chapter_id, 0))
-
-            # このチャプターの問題数
-            total_questions = Question.objects.filter(chapter=chapter).count()
-
-            # 「どれだけの問題を間違えたか」をユニークな問題数で数える
-            unique_wrong_question_ids = {wa.question_id for wa in wa_list}
-            unique_wrong_questions = len(unique_wrong_question_ids)
-
-            # 推定正答率（かなりざっくり：誤答のない問題は正解とみなす）
-            if total_questions > 0:
-                correct = max(total_questions - unique_wrong_questions, 0)
-                accuracy = int(correct / total_questions * 100)
-            else:
-                accuracy = None
-
-            chapters_with_wrong_answers.append({
-                'chapter': chapter,
-                'wrong_answers': wa_list,
-                'count': len(wa_list),
-                'study_seconds': chapter_seconds,
-                'study_time': str(timedelta(seconds=chapter_seconds)),
-                'total_questions': total_questions,
-                'unique_wrong_questions': unique_wrong_questions,
-                'accuracy': accuracy,
-            })
-
-        # === 3-2. 「学習時間だけあるが誤答がないチャプター」も追加 ===
-        for chapter_id, sec in chapter_seconds_map.items():
-            if chapter_id in processed_chapter_ids:
-                continue
-            try:
-                chapter = Chapter.objects.get(id=chapter_id)
-            except Chapter.DoesNotExist:
-                continue
-
-            chapters_with_wrong_answers.append({
-                'chapter': chapter,
-                'wrong_answers': [],
-                'count': 0,
-                'study_seconds': int(sec),
-                'study_time': str(timedelta(seconds=int(sec))),
-                'total_questions': Question.objects.filter(chapter=chapter).count(),
-                'unique_wrong_questions': 0,
-                'accuracy': 100,  # 誤答なしなので 100% とみなす
-            })
-
-        # 表示順：チャプターの order -> id
-        chapters_with_wrong_answers.sort(
-            key=lambda d: (getattr(d['chapter'], 'order', 0), d['chapter'].id)
-        )
-
-        # === 4. 学習済みチャプター数（UserProgress ベース） ===
-        completed_chapters_count = UserProgress.objects.filter(
-            user=user,
-            completed=True
-        ).count()
-
-        # === 5. 全体の推定正答率（global_accuracy） ===
-        if chapter_seconds_map or wrong_by_chapter:
-            # 少なくとも「学習した（時間がある or 誤答がある）」チャプターだけを対象にする
-            target_chapter_ids = set(chapter_seconds_map.keys()) | set(wrong_by_chapter.keys())
-            total_questions_all = Question.objects.filter(
-                chapter_id__in=target_chapter_ids
-            ).count()
-        else:
-            total_questions_all = 0
-
+        # === 4. その他統計（完了数、正答率など） ===
+        completed_chapters_count = UserProgress.objects.filter(user=user, completed=True).count()
+        
+        target_chapter_ids = set(chapter_seconds_map.keys()) | set(wrong_by_chapter.keys())
+        total_questions_all = Question.objects.filter(chapter_id__in=target_chapter_ids).count()
         unique_wrong_all = len({wa.question_id for wa in wrong_answers_qs})
+        global_accuracy = int((max(total_questions_all - unique_wrong_all, 0) / total_questions_all * 100)) if total_questions_all > 0 else None
 
-        if total_questions_all > 0:
-            correct_all = max(total_questions_all - unique_wrong_all, 0)
-            global_accuracy = int(correct_all / total_questions_all * 100)
-        else:
-            global_accuracy = None
+        chapter_results = ChapterResult.objects.filter(user=user).select_related('chapter').order_by('-created_at')
 
-        # === 6. ChapterResult に基づく「正答率の履歴」 ===
-        chapter_results = ChapterResult.objects.filter(
-            user=user
-        ).select_related('chapter').order_by('-created_at')
-
-        # === 7. テンプレートに渡すコンテキスト ===
+        # === 5. テンプレートに渡すコンテキスト ===
         context = {
             'chapters_with_wrong_answers': chapters_with_wrong_answers,
             'total_wrong_answers': total_wrong,
             'total_study_time': total_study_time,
             'total_study_seconds': total_seconds,
-            'max_study_seconds': max_study_seconds,
             'global_accuracy': global_accuracy,
             'completed_chapters_count': completed_chapters_count,
             'total_questions_all': total_questions_all,
             'chapter_results': chapter_results,
-            'total_score': total_score,  # ★ 累計得点（正解問題数 × 10）
+            'total_score': total_score,
+            # --- グラフ用データ（JSON文字列化） ---
+            'chart_labels_json': json.dumps(chart_labels),
+            'chart_values_json': json.dumps(chart_values),
         }
         return render(request, 'tutorial/wrong_answers_book.html', context)
 
     except Exception as e:
-        # ここでログを詳細に出す（コンソールにフルスタックトレースが出る）
         logger.error(f"誤答帳読み込みエラー: {e}", exc_info=True)
         messages.error(request, '誤答帳の読み込み中にエラーが発生しました')
         return redirect('home')
-
-
 
 @login_required
 @require_http_methods(["POST"])
