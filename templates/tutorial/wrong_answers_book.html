@@ -703,6 +703,53 @@
     line-height: 1.6;
 }
 
+/* 优化图表容器，防止内容未画出时的空白感 */
+.chart-container {
+    position: relative;
+    /* 重点：必须是固定像素高度，例如 300px */
+    height: 300px !important; 
+    width: 100%;
+    background-color: #fcfcfc; /* 浅灰色背景，帮助你确认容器位置 */
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 25px;
+    box-sizing: border-box;
+}
+#dailyStudyChart {
+    /* 强制 Canvas 填满父容器 */
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* 每日明细的两列布局 */
+.daily-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.daily-stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 18px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border-left: 4px solid #bdc3c7;
+    transition: all 0.3s ease;
+}
+
+.daily-stat-item.active {
+    border-left-color: #3498db;
+    background: #ebf5fb;
+}
+
+.daily-stat-item.today {
+    border: 1px solid #3498db;
+    background: #eef7fe;
+}
 </style>
 {% endblock %}
 
@@ -715,24 +762,38 @@
 
     <div class="study-time-section">
         <div class="section-header">
-            <h2>⏱️ 毎日学習時間 (直近7日間)</h2>
+            <h2>⏱️ 毎日学習時間 (最近7日間)</h2>
         </div>
-    
+
         <div class="time-stats-overview">
             <div class="total-time-card">
-                <div class="time-icon">📚</div>
+                <div class="time-icon">📊</div>
                 <div class="time-info">
                     <div class="time-label">総累計学習時間</div>
                     <div class="time-value">{{ total_study_time }}</div>
-                    <small style="opacity: 0.7; font-size: 0.8rem;">
-                        (総学習チャプター数: {{ chapters_with_wrong_answers|length }})
-                    </small>
                 </div>
             </div>
         </div>
 
-        <div class="chart-wrapper" style="margin-top: 20px; background: #fff; padding: 15px; border-radius: 10px;">
-            <canvas id="dailyStudyChart" style="max-height: 250px;"></canvas>
+        <div class="chart-container">
+            <canvas id="dailyStudyChart"></canvas>
+        </div>
+
+        <div class="daily-stats-grid">
+            {% for day in daily_breakdown %}
+            <div class="daily-stat-item {% if day.has_data %}active{% endif %} {% if day.is_today %}today{% endif %}">
+                <div class="day-info">
+                    <span style="font-weight: bold; color: #34495e;">{{ day.date_str }}</span>
+                    <small style="color: #7f8c8d; margin-left: 5px;">({{ day.day_name }})</small>
+                    {% if day.is_today %}
+                    <span style="font-size: 0.7rem; background: #3498db; color: white; padding: 1px 6px; border-radius: 10px; margin-left: 5px;">今日</span>
+                    {% endif %}
+                </div>
+                <div class="day-time" style="font-family: monospace; font-weight: bold;">
+                    {% if day.has_data %}{{ day.display_time }}{% else %}0:00:00{% endif %}
+                </div>
+            </div>
+            {% endfor %}
         </div>
     </div>
 
@@ -897,6 +958,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 const STUDY_LOG_KEY = 'study_logs_v1';
 
@@ -955,18 +1017,30 @@ function clearChapterWrongAnswers(chapterId) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const ctx = document.getElementById('dailyStudyChart').getContext('2d');
-    
-    const labels = {{ chart_labels_json|safe }};
-    const data = {{ chart_values_json|safe }};
+    const canvas = document.getElementById('dailyStudyChart');
+    if (!canvas) return;
 
-    new Chart(ctx, {
-        type: 'bar', // 棒グラフ
+    // 获取后端传来的数据，并做简单的控制台打印检查
+    const labels = {{ chart_labels_json|safe }};
+    const dataValues = {{ chart_values_json|safe }};
+    console.log("Labels:", labels);
+    console.log("Data:", dataValues);
+
+    const ctx = canvas.getContext('2d');
+    
+    // 如果之前有图表实例，先销毁它
+    if (window.myStudyChart) {
+        window.myStudyChart.destroy();
+    }
+
+    // 初始化图表
+    window.myStudyChart = new Chart(ctx, {
+        type: 'bar',
         data: {
             labels: labels,
             datasets: [{
                 label: '学習時間 (分)',
-                data: data,
+                data: dataValues,
                 backgroundColor: 'rgba(52, 152, 219, 0.7)',
                 borderColor: '#3498db',
                 borderWidth: 1,
@@ -976,14 +1050,36 @@ document.addEventListener('DOMContentLoaded', function() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                // 优化鼠标悬停时的文字显示
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const totalSeconds = context.parsed.y;
+                            if (totalSeconds < 60) return ` 学習時間: ${totalSeconds}秒`;
+                            const m = Math.floor(totalSeconds / 60);
+                            const s = totalSeconds % 60;
+                            return ` 学習時間: ${m}分${s}秒`;
+                        }
+                    }
+                }
+            },
             scales: {
                 y: {
                     beginAtZero: true,
-                    title: { display: true, text: '分' }
+                    title: {
+                        display: true,
+                        text: '秒数' // 坐标轴单位显示为秒
+                    },
+                    // 如果你希望 Y 轴标签也显示为分，可以加这个 ticks：
+                    ticks: {
+                        callback: function(value) {
+                            if (value < 60) return value + '秒';
+                            return Math.floor(value / 60) + '分';
+                        }
+                    }
                 }
-            },
-            plugins: {
-                legend: { display: false } // 凡例は非表示でスッキリ
             }
         }
     });

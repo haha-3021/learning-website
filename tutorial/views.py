@@ -500,44 +500,30 @@ def clear_chapter_wrong_answers(request, chapter_id):
 @login_required
 def wrong_answers_book(request):
     """
-    間違いノート（日別学習時間と正答率の集計画面）
+    間違いノート（学習時間と正答率の集計画面）
     """
     try:
         user = request.user
 
-        # --- 累計得点の計算 ---
-        total_correct = UserQuestionAnswer.objects.filter(
-            user=user,
-            is_correct=True
-        ).count()
+        # 1. 累计得分计算
+        total_correct = UserQuestionAnswer.objects.filter(user=user, is_correct=True).count()
         total_score = total_correct * 10
 
-        # === 1. 全誤答レコード ===
-        wrong_answers_qs = WrongAnswer.objects.filter(
-            user=user
-        ).select_related(
+        # 2. 全误答记录
+        wrong_answers_qs = WrongAnswer.objects.filter(user=user).select_related(
             'question', 'question__chapter'
         ).order_by('-created_at')
         total_wrong = wrong_answers_qs.count()
 
-        # === 2. 学習時間（全累計 ＋ 【新規】日別統計） ===
-        # 全累計秒数の計算
-        total_seconds_data = ChapterStudyTime.objects.filter(
-            user=user,
-            total_seconds__gt=0
-        ).aggregate(total=Sum('total_seconds'))
-        
-        total_seconds = int(total_seconds_data['total'] or 0)
-        total_study_time = str(timedelta(seconds=total_seconds))
-
-        # --- 【新規】直近7日間の日別集計ロジック ---
+        # 3. 【核心修改】日别学习时长统计 (最近7天)
         today = timezone.now().date()
-        # 6日前から今日までの日付リストを作成（グラフのX軸用）
+        # 创建一个包含最近7天日期的列表 (用于补全没数据的日期)
         date_list = [today - timedelta(days=i) for i in range(6, -1, -1)]
         
+        # 从数据库聚合数据
         daily_stats = ChapterStudyTime.objects.filter(
-            user=user,
-            start_time__date__gte=date_list[0], # 7日前の日付
+            user=user, 
+            start_time__date__gte=date_list[0],
             total_seconds__gt=0
         ).annotate(
             date=TruncDate('start_time')
@@ -545,86 +531,89 @@ def wrong_answers_book(request):
             total_daily_seconds=Sum('total_seconds')
         ).order_by('date')
 
-        # データベースの結果を辞書形式に変換 {datetime.date: seconds}
+        # 映射数据 {datetime.date: seconds}
         stats_map = {stat['date']: stat['total_daily_seconds'] for stat in daily_stats}
 
-        # グラフ用のラベル（月/日）とデータ（分単位に変換）を作成
-        chart_labels = [d.strftime('%m/%d') for d in date_list]
-        chart_values = [round(stats_map.get(d, 0) / 60, 1) for d in date_list]
+        chart_labels = []
+        chart_values = []
+        daily_breakdown = []
 
-        # === 3. 誤答をチャプターごとにまとめる（リスト表示用） ===
-        # ※ここは既存のロジックを維持しますが、グラフ用の変数は別に渡します
+        for d in date_list:
+            sec = int(stats_map.get(d, 0))
+            
+            # --- 修改 1: 图表数值改用“秒”，解决 0.01 的尴尬 ---
+            chart_labels.append(d.strftime('%m/%d'))
+            chart_values.append(sec)  # 直接传入原始秒数
+            
+            # --- 修改 2: 列表文字显示优化 ---
+            if sec == 0:
+                display_time_str = "0秒"
+            elif sec < 60:
+                display_time_str = f"{sec}秒"
+            else:
+                m = sec // 60
+                s = sec % 60
+                display_time_str = f"{m}分{s}秒"
+
+            daily_breakdown.append({
+                'date_str': d.strftime('%Y/%m/%d'),
+                'day_name': ['月','火','水','木','金','土','日'][d.weekday()],
+                'display_time': display_time_str,  # 使用我们优化的格式
+                'is_today': d == today,
+                'has_data': sec > 0
+            })
+
+        # 4. 章节统计 (为了兼容你原来的章节列表显示)
         chapter_seconds_map = {}
-        sessions = ChapterStudyTime.objects.filter(user=user, total_seconds__gt=0)
-        for s in sessions:
-            chapter_seconds_map[s.chapter_id] = chapter_seconds_map.get(s.chapter_id, 0) + s.total_seconds
+        total_seconds = 0
+        completed_sessions = ChapterStudyTime.objects.filter(user=user, total_seconds__gt=0)
+        for session in completed_sessions:
+            dur = session.total_seconds or 0
+            total_seconds += dur
+            chapter_seconds_map[session.chapter_id] = chapter_seconds_map.get(session.chapter_id, 0) + dur
 
+        # 5. 组装章节误答数据 (维持原样)
         wrong_by_chapter = {}
         for wa in wrong_answers_qs:
             cid = wa.question.chapter_id
             wrong_by_chapter.setdefault(cid, []).append(wa)
 
         chapters_with_wrong_answers = []
-        processed_chapter_ids = set()
+        for cid, wa_list in wrong_by_chapter.items():
+            chapter = wa_list[0].question.chapter
+            total_questions = Question.objects.filter(chapter=chapter).count()
+            unique_wrong = len({wa.question_id for wa in wa_list})
+            accuracy = int((total_questions - unique_wrong) / total_questions * 100) if total_questions > 0 else 0
+            
+            chapters_with_wrong_answers.append({
+                'chapter': chapter,
+                'wrong_answers': wa_list,
+                'study_time': str(timedelta(seconds=int(chapter_seconds_map.get(cid, 0)))),
+                'accuracy': accuracy,
+            })
 
-        for chapter_id, wa_list in wrong_by_chapter.items():
-            try:
-                chapter = wa_list[0].question.chapter
-                processed_chapter_ids.add(chapter_id)
-                chapter_seconds = int(chapter_seconds_map.get(chapter_id, 0))
-                total_questions = Question.objects.filter(chapter=chapter).count()
-                unique_wrong_questions = len({wa.question_id for wa in wa_list})
+        # 6. 其他汇总数据
+        total_questions_all = Question.objects.filter(chapter_id__in=chapter_seconds_map.keys()).count()
+        global_accuracy = None
+        if total_questions_all > 0:
+            unique_wrong_all = len({wa.question_id for wa in wrong_answers_qs})
+            global_accuracy = int(max(total_questions_all - unique_wrong_all, 0) / total_questions_all * 100)
 
-                accuracy = int((max(total_questions - unique_wrong_questions, 0) / total_questions * 100)) if total_questions > 0 else None
-
-                chapters_with_wrong_answers.append({
-                    'chapter': chapter,
-                    'wrong_answers': wa_list,
-                    'count': len(wa_list),
-                    'study_seconds': chapter_seconds,
-                    'study_time': str(timedelta(seconds=chapter_seconds)),
-                    'total_questions': total_questions,
-                    'unique_wrong_questions': unique_wrong_questions,
-                    'accuracy': accuracy,
-                })
-            except Exception:
-                continue
-
-        # チャプター順にソート
-        chapters_with_wrong_answers.sort(key=lambda d: (getattr(d['chapter'], 'order', 0), d['chapter'].id))
-
-        # === 4. その他統計（完了数、正答率など） ===
-        completed_chapters_count = UserProgress.objects.filter(user=user, completed=True).count()
-        
-        target_chapter_ids = set(chapter_seconds_map.keys()) | set(wrong_by_chapter.keys())
-        total_questions_all = Question.objects.filter(chapter_id__in=target_chapter_ids).count()
-        unique_wrong_all = len({wa.question_id for wa in wrong_answers_qs})
-        global_accuracy = int((max(total_questions_all - unique_wrong_all, 0) / total_questions_all * 100)) if total_questions_all > 0 else None
-
-        chapter_results = ChapterResult.objects.filter(user=user).select_related('chapter').order_by('-created_at')
-
-        # === 5. テンプレートに渡すコンテキスト ===
         context = {
             'chapters_with_wrong_answers': chapters_with_wrong_answers,
             'total_wrong_answers': total_wrong,
-            'total_study_time': total_study_time,
-            'total_study_seconds': total_seconds,
+            'total_study_time': str(timedelta(seconds=int(total_seconds))),
             'global_accuracy': global_accuracy,
-            'completed_chapters_count': completed_chapters_count,
-            'total_questions_all': total_questions_all,
-            'chapter_results': chapter_results,
             'total_score': total_score,
-            # --- グラフ用データ（JSON文字列化） ---
+            'daily_breakdown': daily_breakdown,
             'chart_labels_json': json.dumps(chart_labels),
             'chart_values_json': json.dumps(chart_values),
         }
         return render(request, 'tutorial/wrong_answers_book.html', context)
 
     except Exception as e:
-        logger.error(f"誤答帳読み込みエラー: {e}", exc_info=True)
-        messages.error(request, '誤答帳の読み込み中にエラーが発生しました')
+        logger.error(f"Error: {e}", exc_info=True)
         return redirect('home')
-
 @login_required
 @require_http_methods(["POST"])
 def mark_guide_studied(request, chapter_id):
