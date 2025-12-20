@@ -232,8 +232,8 @@ def update_study_time(request, chapter_id):
                 chapter=chapter
             )
             
-            # 更新学习时间但不结束会话
-            study_session.total_seconds = max(frontend_seconds, 1)
+            current_db_seconds = study_session.total_seconds or 0
+            study_session.total_seconds = max(int(frontend_seconds), current_db_seconds, 1)
             study_session.save()
             
             return JsonResponse({
@@ -355,64 +355,42 @@ def start_chapter_study(request, chapter_id):
 @login_required
 @require_http_methods(["POST"])
 def end_chapter_study(request, chapter_id):
-    """
-    チャプター学習終了時間を記録しつつ、
-    その時点の回答状況からチャプター結果（ChapterResult）も自動記録する。
-    """
     try:
         chapter = get_object_or_404(Chapter, id=chapter_id)
         data = json.loads(request.body or "{}")
         study_session_id = data.get('study_session_id')
-        frontend_seconds = int(data.get('frontend_seconds', 0))  # フロント側の計測（秒）
+        
+        # 核心：前端传过来的绝对秒数
+        frontend_seconds = int(data.get('frontend_seconds', 0))
 
-        # 1. 対象の学習セッションを取得
         if study_session_id:
             study_session = get_object_or_404(
-                ChapterStudyTime,
-                id=study_session_id,
-                user=request.user,
-                chapter=chapter
+                ChapterStudyTime, id=study_session_id, user=request.user, chapter=chapter
             )
         else:
-            study_session = (
-                ChapterStudyTime.objects.filter(
-                    user=request.user,
-                    chapter=chapter,
-                    end_time__isnull=True
-                )
-                .order_by('-start_time')
-                .first()
-            )
+            study_session = ChapterStudyTime.objects.filter(
+                user=request.user, chapter=chapter, end_time__isnull=True
+            ).order_by('-start_time').first()
 
         if not study_session:
-            return JsonResponse({
-                'success': False,
-                'message': 'アクティブな学習記録が見つかりませんでした'
-            }, status=400)
+            return JsonResponse({'success': False, 'message': 'Session not found'}, status=400)
 
-        # 2. 終了時間をセット
-        if not study_session.end_time:
-            study_session.end_time = timezone.now()
+        now = timezone.now()
+        study_session.end_time = now
 
-        # 3. バックエンド側の秒数を計算
-        backend_seconds = 0
-        if study_session.start_time and study_session.end_time:
-            time_diff = study_session.end_time - study_session.start_time
-            backend_seconds = int(time_diff.total_seconds())
-
-        # 4. front / back の値を考慮して total_seconds を決定
-        if frontend_seconds > 0 and frontend_seconds >= backend_seconds:
-            # フロント計測の方が長ければ優先
-            study_session.total_seconds = frontend_seconds
-        else:
-            # そうでなければバックエンド計測（最低1秒）
-            study_session.total_seconds = max(backend_seconds, 1)
-
+        # 计算后端存活时间作为兜底
+        backend_duration = int((now - study_session.start_time).total_seconds())
+        
+        # --- 修复逻辑 ---
+        # 既然你遇到了 1 秒的问题，说明 frontend_seconds 传值可能在某次调用中被清零了
+        # 我们取：已有值、前端传值、后端计算值 三者中的最大值，确保时间只能增加不能减少
+        current_db_val = study_session.total_seconds or 0
+        study_session.total_seconds = max(frontend_seconds, backend_duration, current_db_val)
+        
         study_session.save()
 
         # 5. ★ここで「その時点の回答状況」からチャプター結果を自動記録する ★
         try:
-            # このユーザーがこのチャプターで回答した最新状態を取得
             answers_qs = UserQuestionAnswer.objects.filter(
                 user=request.user,
                 question__chapter=chapter,
@@ -424,7 +402,6 @@ def end_chapter_study(request, chapter_id):
             if total > 0:
                 accuracy = int(correct / total * 100)
 
-                # 1回分の結果として ChapterResult に保存
                 ChapterResult.objects.create(
                     user=request.user,
                     chapter=chapter,
@@ -433,7 +410,6 @@ def end_chapter_study(request, chapter_id):
                     accuracy=accuracy,
                 )
 
-                # UserProgress の score（最高正答率）も更新
                 user_progress, _ = UserProgress.objects.get_or_create(
                     user=request.user,
                     chapter=chapter,
@@ -443,17 +419,15 @@ def end_chapter_study(request, chapter_id):
                     user_progress.save()
 
                 logger.info(
-                    f"[end_chapter_study] 自動記録: user={request.user}, "
-                    f"chapter={chapter.id}, correct={correct}, total={total}, acc={accuracy}"
+                    f"[end_chapter_study] 自動記録成功: user={request.user}, chapter={chapter.id}"
                 )
             else:
                 logger.info(
-                    f"[end_chapter_study] 自動記録スキップ: 回答数が0件 user={request.user}, chapter={chapter.id}"
+                    f"[end_chapter_study] 自動記録スキップ: 回答数0 user={request.user}"
                 )
 
         except Exception as e2:
-            # 結果記録だけ失敗しても、学習時間の終了は成功させたいので握りつぶす
-            logger.error(f"[end_chapter_study] チャプター結果自動記録エラー: {e2}", exc_info=True)
+            logger.error(f"[end_chapter_study] 結果記録エラー: {e2}", exc_info=True)
 
         # 6. レスポンス
         return JsonResponse({
@@ -464,11 +438,8 @@ def end_chapter_study(request, chapter_id):
         })
 
     except Exception as e:
-        logger.error(f"[end_chapter_study] 学習時間記録の終了に失敗: {e}", exc_info=True)
-        return JsonResponse({
-            'success': False,
-            'message': f'学習時間記録の終了に失敗しました: {str(e)}'
-        }, status=500)
+        logger.error(f"Error: {e}")
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 
 @login_required

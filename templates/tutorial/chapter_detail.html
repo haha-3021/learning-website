@@ -1095,7 +1095,7 @@
 <script>
 // グローバル変数
 let studySessionId = null;
-let studyStartTime = null;
+let studyStartTime = Date.now();
 let studyTimer = null;
 let currentStudySeconds;
 let autoSaveInterval = null;
@@ -1274,62 +1274,41 @@ function startStudyTime() {
 
 // 新しい学習セッションを作成
 function createNewStudySession() {
-    // --- 1. ローカルストレージから時間を復元（最優先） ---
+    // 1. 优先从本地存储恢复
     const savedSeconds = localStorage.getItem(storageKey);
-    if (savedSeconds !== null) {
+    if (savedSeconds !== null && savedSeconds !== "undefined") {
         currentStudySeconds = parseInt(savedSeconds, 10);
-        console.log('ローカルストレージから時間を復元しました:', currentStudySeconds);
-    } else {
-        // キャッシュがない場合のみ初期化
-        currentStudySeconds = currentStudySeconds || 0;
+        console.log('从本地恢复时间:', currentStudySeconds);
     }
 
-    // 画面表示を即座に更新（0表示のチラつきを防止）
+    // 2. 立即更新 UI，防止显示 00:00
     updateStudyTimeDisplay();
 
-    // --- 2. 既存のセッションがあるか確認 ---
     const currentSessionId = {% if current_session_id %}{{ current_session_id }}{% else %}null{% endif %};
     
     if (currentSessionId) {
         studySessionId = currentSessionId;
-        console.log('既存のセッションを使用します:', studySessionId);
-        
-        // タイマーが二重に起動しないようにチェック
-        if (!studyTimer) {
-            startStudyTimeDisplay();
-            startAutoSave();
-        }
+        startStudyTimeDisplay();
+        startAutoSave();
         return;
     }
     
-    // --- 3. セッションがない場合は新規作成 ---
     const chapterId = {{ chapter.id }};
     fetch(`/chapter/${chapterId}/start-study/`, {
         method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-            'Content-Type': 'application/json'
-        }
+        headers: { 'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json' }
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
             studySessionId = data.study_session_id;
-            console.log('新規セッションの作成に成功しました:', studySessionId);
-            
-            // ローカルに保存された時間がない場合のみ、バックエンドの値を使用
-            if (!localStorage.getItem(storageKey)) {
-                currentStudySeconds = data.initial_seconds || 0;
+            // 只有当本地完全没数据时，才采用后端返回的 initial_seconds
+            if (!localStorage.getItem(storageKey) && data.initial_seconds) {
+                currentStudySeconds = data.initial_seconds;
             }
-
-            if (!studyTimer) {
-                startStudyTimeDisplay();
-                startAutoSave();
-            }
+            startStudyTimeDisplay();
+            startAutoSave();
         }
-    })
-    .catch(error => {
-        console.error('セッション開始エラー:', error);
     });
 }
 

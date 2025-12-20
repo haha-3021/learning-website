@@ -1068,15 +1068,10 @@ document.addEventListener('DOMContentLoaded', function() {
             scales: {
                 y: {
                     beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: '秒数' // 坐标轴单位显示为秒
-                    },
-                    // 如果你希望 Y 轴标签也显示为分，可以加这个 ticks：
                     ticks: {
                         callback: function(value) {
                             if (value < 60) return value + '秒';
-                            return Math.floor(value / 60) + '分';
+                            return Math.floor(value / 60) + '分' + (value % 60) + '秒';
                         }
                     }
                 }
