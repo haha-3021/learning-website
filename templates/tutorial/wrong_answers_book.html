@@ -790,7 +790,7 @@
                     {% endif %}
                 </div>
                 <div class="day-time" style="font-family: monospace; font-weight: bold;">
-                    {% if day.has_data %}{{ day.display_time }}{% else %}0:00:00{% endif %}
+                    {{ day.display_time }}
                 </div>
             </div>
             {% endfor %}

@@ -468,6 +468,8 @@ def clear_chapter_wrong_answers(request, chapter_id):
             "message": f"誤答記録の削除に失敗しました: {str(e)}"
         }, status=500)
 
+
+
 @login_required
 def wrong_answers_book(request):
     """
@@ -517,14 +519,7 @@ def wrong_answers_book(request):
             chart_values.append(sec)  # 直接传入原始秒数
             
             # --- 修改 2: 列表文字显示优化 ---
-            if sec == 0:
-                display_time_str = "0秒"
-            elif sec < 60:
-                display_time_str = f"{sec}秒"
-            else:
-                m = sec // 60
-                s = sec % 60
-                display_time_str = f"{m}分{s}秒"
+            display_time_str = str(timedelta(seconds=sec))
 
             daily_breakdown.append({
                 'date_str': d.strftime('%Y/%m/%d'),
@@ -570,6 +565,8 @@ def wrong_answers_book(request):
             unique_wrong_all = len({wa.question_id for wa in wrong_answers_qs})
             global_accuracy = int(max(total_questions_all - unique_wrong_all, 0) / total_questions_all * 100)
 
+        completed_chapters_count = UserProgress.objects.filter(user=user, completed=True).count()
+
         context = {
             'chapters_with_wrong_answers': chapters_with_wrong_answers,
             'total_wrong_answers': total_wrong,
@@ -579,6 +576,7 @@ def wrong_answers_book(request):
             'daily_breakdown': daily_breakdown,
             'chart_labels_json': json.dumps(chart_labels),
             'chart_values_json': json.dumps(chart_values),
+            'completed_chapters_count': completed_chapters_count,
         }
         return render(request, 'tutorial/wrong_answers_book.html', context)
 
