@@ -489,23 +489,23 @@ def wrong_answers_book(request):
         total_wrong = wrong_answers_qs.count()
 
         # 3. 【核心修改】日别学习时长统计 (最近7天)
+        # 3. 日别学习时长统计 (最近7日間)
         today = timezone.now().date()
-        # 创建一个包含最近7天日期的列表 (用于补全没数据的日期)
         date_list = [today - timedelta(days=i) for i in range(6, -1, -1)]
         
-        # 从数据库聚合数据
+        # 修正：移除 total_seconds__gt=0，改用 end_time 判定已完成的记录
         daily_stats = ChapterStudyTime.objects.filter(
             user=user, 
             start_time__date__gte=date_list[0],
-            total_seconds__gt=0
+            end_time__isnull=False  # 只要是结束了的记录都纳入统计
         ).annotate(
             date=TruncDate('start_time')
         ).values('date').annotate(
             total_daily_seconds=Sum('total_seconds')
         ).order_by('date')
 
-        # 映射数据 {datetime.date: seconds}
-        stats_map = {stat['date']: stat['total_daily_seconds'] for stat in daily_stats}
+        # 映射数据，确保 NULL 被转为 0
+        stats_map = {stat['date']: stat['total_daily_seconds'] or 0 for stat in daily_stats}
 
         chart_labels = []
         chart_values = []
@@ -513,18 +513,19 @@ def wrong_answers_book(request):
 
         for d in date_list:
             sec = int(stats_map.get(d, 0))
-            
-            # --- 修改 1: 图表数值改用“秒”，解决 0.01 的尴尬 ---
             chart_labels.append(d.strftime('%m/%d'))
-            chart_values.append(sec)  # 直接传入原始秒数
-            
-            # --- 修改 2: 列表文字显示优化 ---
-            display_time_str = str(timedelta(seconds=sec))
+            chart_values.append(sec)
+    
+            # 统一时间显示格式 HH:MM:SS
+            td = timedelta(seconds=sec)
+            total_minutes, seconds = divmod(td.seconds, 60)
+            hours, minutes = divmod(total_minutes, 60)
+            display_time_str = f"{hours:02}:{minutes:02}:{seconds:02}"
 
             daily_breakdown.append({
                 'date_str': d.strftime('%Y/%m/%d'),
                 'day_name': ['月','火','水','木','金','土','日'][d.weekday()],
-                'display_time': display_time_str,  # 使用我们优化的格式
+                'display_time': display_time_str,
                 'is_today': d == today,
                 'has_data': sec > 0
             })

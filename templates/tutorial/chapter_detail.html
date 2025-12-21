@@ -1274,14 +1274,20 @@ function startStudyTime() {
 
 // 新しい学習セッションを作成
 function createNewStudySession() {
-    // 1. 优先从本地存储恢复
-    const savedSeconds = localStorage.getItem(storageKey);
-    if (savedSeconds !== null && savedSeconds !== "undefined") {
+// 1. 从本地存储读取
+    let savedSeconds = localStorage.getItem(storageKey);
+    console.log('尝试恢复本地时间，原始数据:', savedSeconds);
+
+    // 2. 防御性检测：如果读取到的是 null, undefined, "NaN" 字符串或无法转换的乱码
+    if (savedSeconds === null || savedSeconds === "undefined" || isNaN(parseInt(savedSeconds))) {
+        currentStudySeconds = 0;
+        console.log('检测到无效时间，已重置为 0');
+    } else {
         currentStudySeconds = parseInt(savedSeconds, 10);
-        console.log('从本地恢复时间:', currentStudySeconds);
+        console.log('成功恢复本地时间:', currentStudySeconds);
     }
 
-    // 2. 立即更新 UI，防止显示 00:00
+    // 3. 立即更新 UI
     updateStudyTimeDisplay();
 
     const currentSessionId = {% if current_session_id %}{{ current_session_id }}{% else %}null{% endif %};
