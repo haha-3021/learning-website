@@ -478,6 +478,9 @@ def wrong_answers_book(request):
     try:
         user = request.user
 
+        # テンプレートの {% for result in chapter_results %} に対応します
+        chapter_results = ChapterResult.objects.filter(user=user).select_related('chapter').order_by('-created_at')
+
         # 1. 累计得分计算
         total_correct = UserQuestionAnswer.objects.filter(user=user, is_correct=True).count()
         total_score = total_correct * 10
@@ -555,6 +558,7 @@ def wrong_answers_book(request):
             chapters_with_wrong_answers.append({
                 'chapter': chapter,
                 'wrong_answers': wa_list,
+                'count': len(wa_list),
                 'study_time': str(timedelta(seconds=int(chapter_seconds_map.get(cid, 0)))),
                 'accuracy': accuracy,
             })
@@ -569,6 +573,7 @@ def wrong_answers_book(request):
         completed_chapters_count = UserProgress.objects.filter(user=user, completed=True).count()
 
         context = {
+            'chapter_results': chapter_results,
             'chapters_with_wrong_answers': chapters_with_wrong_answers,
             'total_wrong_answers': total_wrong,
             'total_study_time': str(timedelta(seconds=int(total_seconds))),
